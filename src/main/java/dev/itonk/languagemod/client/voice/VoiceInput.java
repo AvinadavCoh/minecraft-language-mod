@@ -100,6 +100,10 @@ public final class VoiceInput implements VoiceStatus {
 		}
 	}
 
+	public VoiceSettings settings() {
+		return settings;
+	}
+
 	// ---- lifecycle (client thread) ---------------------------------------------------
 
 	public void onChallengeStart(String languageCode, String expectedWord) {

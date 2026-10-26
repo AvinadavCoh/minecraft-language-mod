@@ -227,7 +227,7 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 			// 7e. The dictionary is saved in the world and shown with J
 			sp.getServer().runOnServer(s -> LanguageMod.challenges().saveAll());
 			Path saved = sp.getServer().computeOnServer(s -> s.getSavePath(net.minecraft.util.WorldSavePath.ROOT)
-					.resolve("languagemod/players/" + player(s).getUuid() + ".json"));
+					.resolve("languagemod/players/ro/" + player(s).getUuid() + ".json"));
 			String json = read(saved);
 			check(json.contains("minecraft:apple") && json.contains("\"misses\": 1") && json.contains("playTicks"),
 					"progress file saved in the world: " + saved.getFileName());
@@ -255,7 +255,73 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 				write(config, original);
 				sp.getServer().runCommand("languagemod reload");
 			}
+			ctx.waitTicks(10);
 
+			// 8b. J toggles the dictionary; K opens settings
+			ctx.getInput().pressKey(GLFW.GLFW_KEY_J);
+			ctx.waitForScreen(dev.itonk.languagemod.client.DictionaryScreen.class);
+			ctx.getInput().pressKey(GLFW.GLFW_KEY_J);
+			ctx.waitTicks(5);
+			check(ctx.computeOnClient(c -> c.currentScreen == null), "J closes the dictionary again");
+
+			// 8c. Settings screen: switch to Russian with real clicks, answer in Cyrillic
+			ctx.getInput().pressKey(GLFW.GLFW_KEY_K);
+			ctx.waitForScreen(dev.itonk.languagemod.client.SettingsScreen.class);
+			ctx.waitTicks(5);
+			ctx.takeScreenshot("13-settings");
+			click(ctx, "Language to learn"); // ro -> es
+			click(ctx, "Language to learn"); // es -> ru
+			check(buttonText(ctx, "Language to learn").endsWith("Russian"), "settings: language button cycles to Russian");
+			click(ctx, "Done");
+			ctx.waitTicks(10);
+			check(ctx.computeOnClient(c -> c.currentScreen == null), "settings: Done closes the screen");
+			check(sp.getServer().computeOnServer(s -> LanguageMod.challenges().config().targetLanguage).equals("ru"),
+					"settings: the world now asks in Russian");
+			sp.getServer().runCommand("give @p minecraft:cake 1");
+			ctx.waitTicks(25);
+			String ruWord = ctx.computeOnClient(c -> LanguageModClient.HUD.debugWord());
+			check(ruWord.equals("Торт"), "Russian popup shows the game's own word (" + ruWord + ")");
+			ctx.takeScreenshot("14-russian-prompt");
+			chat(ctx, "торт");
+			ctx.waitTicks(5);
+			check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugPhase()).equals("CORRECT"), "Russian: typed 'торт' is correct");
+			ctx.waitTicks(40);
+
+			// 8d. Hebrew: shown right to left, answered in Hebrew
+			ctx.getInput().pressKey(GLFW.GLFW_KEY_K);
+			ctx.waitForScreen(dev.itonk.languagemod.client.SettingsScreen.class);
+			click(ctx, "Language to learn"); // ru -> he
+			click(ctx, "Done");
+			ctx.waitTicks(10);
+			sp.getServer().runCommand("give @p minecraft:torch 4");
+			ctx.waitTicks(25);
+			String heWord = ctx.computeOnClient(c -> LanguageModClient.HUD.debugWord());
+			check(heWord.equals("לפיד"), "Hebrew popup shows the game's own word (" + heWord + ")");
+			chat(ctx, "לפוד"); // one wrong letter: popup and chat colour it
+			ctx.waitTicks(5);
+			ctx.takeScreenshot("15-hebrew-prompt");
+			chat(ctx, "לפיד");
+			ctx.waitTicks(5);
+			check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugPhase()).equals("CORRECT"), "Hebrew: typed 'לפיד' is correct");
+			ctx.waitTicks(40);
+			ctx.getInput().pressKey(GLFW.GLFW_KEY_J);
+			ctx.waitForScreen(dev.itonk.languagemod.client.DictionaryScreen.class);
+			ctx.waitTicks(10);
+			ctx.takeScreenshot("16-hebrew-dictionary");
+			ctx.getInput().pressKey(GLFW.GLFW_KEY_J);
+			ctx.waitTicks(5);
+
+			// 8e. Back to Romanian: the Romanian dictionary is still there (oak log known, not asked)
+			ctx.getInput().pressKey(GLFW.GLFW_KEY_K);
+			ctx.waitForScreen(dev.itonk.languagemod.client.SettingsScreen.class);
+			click(ctx, "Language to learn"); // he -> ro
+			click(ctx, "Done");
+			ctx.waitTicks(10);
+			check(sp.getServer().computeOnServer(s -> LanguageMod.challenges().config().targetLanguage).equals("ro"), "settings: back to Romanian");
+			sp.getServer().runCommand("give @p minecraft:oak_log 1");
+			ctx.waitTicks(25);
+			check(!sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))),
+					"Romanian progress kept per language: known oak log isn't asked again");
 		}
 
 		// 9. Client-only mode: the server acts as if it had no LanguageMod (no rules, no channels),
@@ -353,6 +419,33 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 		ctx.waitTicks(3);
 		ctx.getInput().typeChars(line);
 		ctx.getInput().pressKey(GLFW.GLFW_KEY_ENTER);
+	}
+
+	/** Clicks the settings button whose label starts with {@code prefix}, with the real mouse. */
+	private static void click(ClientGameTestContext ctx, String prefix) {
+		double[] pos = ctx.computeOnClient(c -> {
+			for (var child : c.currentScreen.children()) {
+				if (child instanceof net.minecraft.client.gui.widget.ButtonWidget b && b.getMessage().getString().startsWith(prefix)) {
+					double scale = c.getWindow().getScaleFactor();
+					return new double[] {(b.getX() + b.getWidth() / 2.0) * scale, (b.getY() + b.getHeight() / 2.0) * scale};
+				}
+			}
+			throw new AssertionError("no button " + prefix);
+		});
+		ctx.getInput().setCursorPos(pos[0], pos[1]);
+		ctx.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+		ctx.waitTicks(2);
+	}
+
+	private static String buttonText(ClientGameTestContext ctx, String prefix) {
+		return ctx.computeOnClient(c -> {
+			for (var child : c.currentScreen.children()) {
+				if (child instanceof net.minecraft.client.gui.widget.ButtonWidget b && b.getMessage().getString().startsWith(prefix)) {
+					return b.getMessage().getString();
+				}
+			}
+			return "";
+		});
 	}
 
 	private static double horizontal(Vec3d a, Vec3d b) {

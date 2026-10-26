@@ -48,6 +48,14 @@
   (cached). Measured ~80 ms/answer on the RTX 2060 SUPER. Pid file stops a helper left by a crashed game.
 - Matching: answer inside a longer phrase counts (exact letters for the inner window; fuzzy only on the whole phrase).
 
+- Settings screen (K): writes config.json/voice.json, reloads on the integrated server thread or client-only rules;
+  locked rules on a remote modded server. Languages list = resources/languagemod/languages.json; picking one builds
+  config/languagemod/<code>.json from the game's own lang file via the resource manager (GameDictionaries +
+  DictionaryBuilder), hand-written defaults merged; files under 500 items get upgraded. Progress per language:
+  players/<lang>/<uuid>.json (old players/<uuid>.json read as Romanian). Language switch re-seeds carried items spaced out.
+- Hebrew: Minecraft's Text/chat path reorders RTL itself even with an English UI; only the per-letter popup word needs
+  BidiText.visualOrder. (First attempt reversed chat twice — caught by zooming the screenshot.)
+
 ## Next 3 steps
 1. Owner plays in PolyMC and judges feel (timer length, freeze, messages).
 2. Persist `verified` sets per player (currently reset each server start).

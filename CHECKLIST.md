@@ -47,6 +47,12 @@ Bot = `./gradlew runClientGameTest` (src/gametest, real chat/W/Q/F/inventory inp
 - [ ] GPU warm-up on silence at start (first in-game answer took 13.6 s before) · [RAN] IT first answer 89 ms · not yet in a game session
 - [x] Answer counts when said inside a longer phrase ("mor măr", "este pui crud"); exact letters only inside phrases · [RAN] unit test · 2026-10-26
 - [ ] Client-only: asked item can still be dropped/placed (no server to block it) · known gap
+- [x] Settings screen (K, or button in the dictionary): language, time, miss = lose item / damage only, voice mode, GPU · [RAN] bot real mouse clicks + [SAW] 13-settings · 2026-10-26
+- [x] Russian + Hebrew to learn; full word list built on the PC from the game's own ru_ru / he_il · [RAN] bot ("Торт", "לפיד" typed correct) + [SAW] 14/15 · 2026-10-26
+- [x] Hebrew reads right to left in popup, chat and dictionary · [SAW] zoomed 15/16 · 2026-10-26
+- [x] Separate saved dictionary per language; switching back keeps the old one · [RAN] bot (oak log not re-asked in Romanian) · 2026-10-26
+- [x] J closes the dictionary too · [RAN] bot · 2026-10-26
+- [ ] Russian / Hebrew voice (Whisper on your speech) · untested
 - [ ] Voice in PolyMC after the backlog fix (pană / pui crud) · needs owner
 - [ ] Sound actually audible through speakers · owner (I can't hear)
 - [ ] Fun/feel: 15 s, freeze, message wording · owner

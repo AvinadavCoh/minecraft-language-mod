@@ -1,10 +1,12 @@
 package dev.itonk.languagemod.client;
 
 import dev.itonk.languagemod.client.voice.VoiceStatus;
+import dev.itonk.languagemod.dictionary.BidiText;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
+import net.minecraft.text.Text;
 import org.joml.Matrix3x2fStack;
 
 /**
@@ -94,7 +96,9 @@ public final class ChallengeHudRenderer {
 		m.translate(tx, y + 18);
 		m.scale(WORD_SCALE, WORD_SCALE);
 		int cx = 0;
-		for (int i = 0; i < state.word.length(); i++) {
+		// One letter per draw call, so Minecraft can't reorder it: put Hebrew in screen order ourselves.
+		// Colours still follow the spoken letters.
+		for (int i : BidiText.visualOrder(state.word)) {
 			String ch = String.valueOf(state.word.charAt(i));
 			int color = state.mask == null ? WHITE : (state.mask.charAt(i) == 'G' ? GREEN : RED);
 			ctx.drawTextWithShadow(font, ch, cx, 0, color);
@@ -102,7 +106,7 @@ public final class ChallengeHudRenderer {
 		}
 		m.popMatrix();
 
-		if (!said.isEmpty()) ctx.drawTextWithShadow(font, said, tx, y + 40, GRAY);
+		if (!said.isEmpty()) ctx.drawTextWithShadow(font, Text.literal(said), tx, y + 40, GRAY); // Text: Minecraft reorders Hebrew in it
 
 		// Mic status + level meter, just above the time bar.
 		if (!micText.isEmpty()) {

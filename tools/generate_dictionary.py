@@ -26,9 +26,9 @@ def fold(s: str) -> str:
     return " ".join(s.split())
 
 
-def find_polymc_lang(lang: str) -> Path:
+def find_polymc_lang(locale: str) -> Path:
     assets = Path(os.environ["APPDATA"]) / "PolyMC" / "assets"
-    key = f"minecraft/lang/{lang}_{lang}.json"
+    key = f"minecraft/lang/{locale}.json"
     for index in sorted((assets / "indexes").glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
         obj = json.loads(index.read_text(encoding="utf-8")).get("objects", {}).get(key)
         if obj:
@@ -44,15 +44,17 @@ def main() -> None:
     ap.add_argument("--lang-file", type=Path)
     ap.add_argument("--polymc", action="store_true")
     ap.add_argument("--lang", default="ro")
-    ap.add_argument("--handwritten", type=Path, required=True)
+    ap.add_argument("--locale", help="Minecraft locale if not <lang>_<lang>, e.g. he_il")
+    ap.add_argument("--handwritten", type=Path, help="hand-written dictionary whose answers are kept as extras")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
 
-    lang_file = args.lang_file or (find_polymc_lang(args.lang) if args.polymc else None)
+    locale = args.locale or f"{args.lang}_{args.lang}"
+    lang_file = args.lang_file or (find_polymc_lang(locale) if args.polymc else None)
     if lang_file is None:
         sys.exit("give --lang-file or --polymc")
     official = json.loads(lang_file.read_text(encoding="utf-8"))
-    hand = json.loads(args.handwritten.read_text(encoding="utf-8"))
+    hand = json.loads(args.handwritten.read_text(encoding="utf-8")) if args.handwritten else {}
 
     items: dict[str, list[str]] = {}
     for key, name in official.items():
@@ -76,7 +78,7 @@ def main() -> None:
                 added_extra += 1
 
     out = {
-        "_comment": f"Generated from Minecraft's {lang_file.name if args.lang_file else args.lang + '_' + args.lang + '.json'} "
+        "_comment": f"Generated from Minecraft's {lang_file.name if args.lang_file else locale + '.json'} "
                     "plus hand-written extras. First answer = word shown in the popup. Local use only.",
         "articles": hand.get("articles", []),
         "items": dict(sorted(items.items())),

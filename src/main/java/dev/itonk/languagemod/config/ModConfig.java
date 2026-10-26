@@ -52,6 +52,14 @@ public final class ModConfig {
 		}
 	}
 
+	/** Writes config.json (the settings screen). */
+	public void save(Path configDir) throws IOException {
+		Files.createDirectories(configDir);
+		try (java.io.Writer w = Files.newBufferedWriter(configDir.resolve("config.json"))) {
+			GSON.toJson(this, w);
+		}
+	}
+
 	/** Copies a file from src/main/resources/languagemod/defaults into the config dir if absent. */
 	public static void copyDefaultIfMissing(String name, Path target) throws IOException {
 		if (Files.exists(target)) return;

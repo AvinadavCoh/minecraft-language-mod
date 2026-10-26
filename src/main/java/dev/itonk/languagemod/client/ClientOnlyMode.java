@@ -81,6 +81,13 @@ public final class ClientOnlyMode {
 		rules.onJoin(player);
 	}
 
+	/** Settings changed: take the reloaded config and dictionary from the shared manager. */
+	void reload() {
+		if (rules == null) return;
+		ChallengeManager shared = LanguageMod.challenges();
+		rules.reload(shared.config(), shared.dictionary());
+	}
+
 	/** A plain chat line while a word is asked is the answer, and never reaches the server. */
 	boolean onChat(String message) {
 		if (rules == null || !rules.config().chatAnswers || !rules.isFrozen(player.uuid())) return false;

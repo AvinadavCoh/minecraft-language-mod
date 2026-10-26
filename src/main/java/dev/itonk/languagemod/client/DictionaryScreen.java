@@ -4,6 +4,8 @@ import dev.itonk.languagemod.network.HudPayloads;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
@@ -43,6 +45,8 @@ public final class DictionaryScreen extends Screen {
 	protected void init() {
 		latest = null;
 		unavailable = false;
+		addDrawableChild(ButtonWidget.builder(Text.literal("Settings (K)"), b -> client.setScreen(new SettingsScreen(this)))
+				.dimensions(width - 84, 4, 80, 16).build());
 		if (ClientPlayNetworking.canSend(HudPayloads.DictionaryRequest.ID)) {
 			ClientPlayNetworking.send(HudPayloads.DictionaryRequest.INSTANCE);
 		} else if (LanguageModClient.CLIENT_ONLY.active()) {
@@ -50,6 +54,16 @@ public final class DictionaryScreen extends Screen {
 		} else {
 			unavailable = true;
 		}
+	}
+
+	@Override
+	public boolean keyPressed(KeyInput input) {
+		// J opens the dictionary, so J closes it too.
+		if (LanguageModClient.dictionaryKey.matchesKey(input)) {
+			close();
+			return true;
+		}
+		return super.keyPressed(input);
 	}
 
 	@Override
@@ -116,7 +130,7 @@ public final class DictionaryScreen extends Screen {
 		Identifier id = Identifier.tryParse(e.itemId());
 		ItemStack stack = id == null ? ItemStack.EMPTY : new ItemStack(Registries.ITEM.get(id));
 		ctx.drawItem(stack, x, y + 1);
-		ctx.drawTextWithShadow(textRenderer, e.word(), x + 22, y + 2, 0xFFFFFFFF);
+		ctx.drawTextWithShadow(textRenderer, Text.literal(e.word()), x + 22, y + 2, 0xFFFFFFFF);
 		ctx.drawTextWithShadow(textRenderer, stack.getName(), x + 22, y + 11, 0xFF808080);
 
 		// Right side: ✓/✗ counts, box progress, due time.

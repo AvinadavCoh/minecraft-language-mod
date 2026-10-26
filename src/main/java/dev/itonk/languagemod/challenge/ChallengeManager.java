@@ -37,6 +37,7 @@ public final class ChallengeManager {
 	private ModConfig config;
 	private TranslationDictionary dictionary;
 	private ProgressStore store;
+	private boolean seedCarriedOnNextTick;
 	/** Tick clock of the side that owns this manager (server ticks, or client ticks). */
 	private long now;
 
@@ -46,6 +47,13 @@ public final class ChallengeManager {
 	}
 
 	public void reload(ModConfig config, TranslationDictionary dictionary) {
+		if (!config.targetLanguage.equals(this.config.targetLanguage)) {
+			// Each language has its own saved dictionary: store the old one, start the new one fresh.
+			saveAll();
+			states.clear();
+			// Everything carried is new in the new language: space it out like on join, not all at once.
+			seedCarriedOnNextTick = true;
+		}
 		this.config = config;
 		this.dictionary = dictionary;
 	}
@@ -66,7 +74,7 @@ public final class ChallengeManager {
 
 	public PlayerChallengeState state(UUID player) {
 		return states.computeIfAbsent(player,
-				id -> new PlayerChallengeState(store != null ? store.load(id) : new WordProgress()));
+				id -> new PlayerChallengeState(store != null ? store.load(id, config.targetLanguage) : new WordProgress()));
 	}
 
 	public boolean isFrozen(UUID player) {
@@ -84,6 +92,13 @@ public final class ChallengeManager {
 	// ---- lifecycle -----------------------------------------------------------------
 
 	public void onJoin(ChallengePlayer player) {
+		int carried = seedCarried(player);
+		boolean off = config.skipCreativeAndSpectator && player.isCreativeOrSpectator();
+		player.welcome(config.targetLanguageName, carried, config.reviewGapSeconds, off);
+	}
+
+	/** Returns how many carried item types were queued as spaced-out reviews. */
+	private int seedCarried(ChallengePlayer player) {
 		PlayerChallengeState state = state(player.uuid());
 		int carried = 0;
 		if (!config.challengeItemsHeldOnJoin) {
@@ -98,8 +113,7 @@ public final class ChallengeManager {
 			}
 			state.dirty = true;
 		}
-		boolean off = config.skipCreativeAndSpectator && player.isCreativeOrSpectator();
-		player.welcome(config.targetLanguageName, carried, config.reviewGapSeconds, off);
+		return carried;
 	}
 
 	public void onLeave(ChallengePlayer player) {
@@ -124,7 +138,7 @@ public final class ChallengeManager {
 	private void save(UUID id, PlayerChallengeState state) {
 		if (store == null) return;
 		try {
-			store.save(id, state.progress);
+			store.save(id, config.targetLanguage, state.progress);
 			state.dirty = false;
 		} catch (Exception e) {
 			LanguageMod.LOG.error("Could not save language progress for {}", id, e);
@@ -142,7 +156,10 @@ public final class ChallengeManager {
 	public void tick(long now, Iterable<? extends ChallengePlayer> players) {
 		this.now = now;
 		boolean scan = now % Math.max(1, config.scanIntervalTicks) == 0;
+		boolean seed = seedCarriedOnNextTick;
+		seedCarriedOnNextTick = false;
 		for (ChallengePlayer player : players) {
+			if (seed) seedCarried(player);
 			PlayerChallengeState state = state(player.uuid());
 			state.progress.playTicks++;
 			if (state.dirty && state.progress.playTicks % SAVE_EVERY_TICKS == 0) save(player.uuid(), state);

@@ -22,6 +22,9 @@ import java.nio.file.Path;
 public final class LanguageModClient implements ClientModInitializer {
 	public static final ChallengeHudState HUD = new ChallengeHudState();
 	public static VoiceInput VOICE;
+	/** Toggle keys: the screens close themselves on the same key. */
+	static KeyBinding dictionaryKey;
+	static KeyBinding settingsKey;
 	/** Runs the rules in this game when the server has no LanguageMod. */
 	public static final ClientOnlyMode CLIENT_ONLY = new ClientOnlyMode();
 
@@ -34,8 +37,10 @@ public final class LanguageModClient implements ClientModInitializer {
 		KeyBinding.Category category = KeyBinding.Category.create(Identifier.of("languagemod", "voice"));
 		KeyBinding talkKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.languagemod.talk",
 				InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_V, category));
-		KeyBinding dictionaryKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.languagemod.dictionary",
+		dictionaryKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.languagemod.dictionary",
 				InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_J, category));
+		settingsKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.languagemod.settings",
+				InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_K, category));
 		ClientPlayNetworking.registerGlobalReceiver(HudPayloads.DictionarySnapshot.ID,
 				(p, ctx) -> DictionaryScreen.receive(p.entries()));
 
@@ -57,6 +62,7 @@ public final class LanguageModClient implements ClientModInitializer {
 			CLIENT_ONLY.tick(client);
 			VOICE.tickPushToTalk(talkKey.isPressed());
 			while (dictionaryKey.wasPressed()) client.setScreen(new DictionaryScreen());
+			while (settingsKey.wasPressed()) client.setScreen(new SettingsScreen(null));
 		});
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> CLIENT_ONLY.onJoin());
 		// In client-only mode a chat line while a word is asked is the answer: keep it off the server.

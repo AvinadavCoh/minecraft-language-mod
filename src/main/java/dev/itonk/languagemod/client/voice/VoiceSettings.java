@@ -66,6 +66,14 @@ public final class VoiceSettings {
 		}
 	}
 
+	/** Writes voice.json (the settings screen). */
+	public void save(Path dir) throws IOException {
+		Files.createDirectories(dir);
+		try (Writer w = Files.newBufferedWriter(dir.resolve("voice.json"))) {
+			GSON.toJson(this, w);
+		}
+	}
+
 	public boolean open() {
 		return "open".equalsIgnoreCase(mode);
 	}

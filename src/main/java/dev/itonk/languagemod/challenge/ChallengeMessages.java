@@ -29,6 +29,7 @@ public final class ChallengeMessages {
 	/** The word with each letter green (right) or red (wrong). */
 	public static Text attempt(String attempt, String word, boolean[] mask) {
 		MutableText colored = Text.empty();
+		// Logical order: Minecraft's chat runs its own right-to-left reordering on each line (checked on screen).
 		for (int i = 0; i < word.length(); i++) {
 			colored.append(Text.literal(String.valueOf(word.charAt(i))).formatted(mask[i] ? Formatting.GREEN : Formatting.RED));
 		}

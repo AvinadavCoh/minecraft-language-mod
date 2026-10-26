@@ -19,6 +19,10 @@
 - Measured (Ryzen 5 3600, 6 threads): full 30 s window ~7 s/answer; audioContext 1000 ~4 s, all test words right;
   below ~750 Whisper adds junk endings ("Mărf"). Phrases < 1 s must be padded (whisper.cpp rejects them).
   The on-screen word is passed as a prompt hint: "pâine" was misheard as "Pui ne?" without it; "mor" stays "Mor" with it.
+- Mic gotcha: Java's default capture device follows Windows' default recording device, which on the owner's PC is
+  Line In (hiss only). MicCapture now prefers a real "Microphone ..." device; voice.json "micDevice" overrides;
+  the log lists all devices. Diagnose with ~/.claude/tools/mic-test (records every input to WAV at once).
+  Owner's real voice in PolyMC: 2nd try accepted, ~4.3 s per answer. Debug WAVs: voice.json "saveRecordings": true.
 - Test audio: edge-tts ro-RO-AlinaNeural clips in src/gametest/resources/voice. Real-Whisper IT: `./gradlew test -Dwhisper.model=PATH -Dwhisper.threads=6`.
 
 ## Next 3 steps

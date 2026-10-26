@@ -23,7 +23,9 @@ Bot = `./gradlew runClientGameTest` (src/gametest, real chat/W/Q/F/inventory inp
 - [ ] Popup seen in PolyMC · new jar installed, not played yet (focus taken by another window)
 - [x] Voice: spoken word (recorded clip) → phrase cut → Whisper → judged like typing · [RAN] bot ("pâine" accepted, "mor" = retry) + [SAW] 06/07-voice · 2026-10-26
 - [x] Whisper loads in PolyMC, open mic is the default · [RAN] latest.log "Whisper ready … mode=open" · 2026-10-26
-- [ ] Open mic with a real microphone (your voice, background noise, Windows mic permission) · needs owner
+- [x] Open mic with your real voice in PolyMC: "Scânduri de stejara" → retry, "Scânduri de stejar" → Correct, ~4.3 s each · [RAN] PolyMC log + recordings · 2026-10-26
+- [x] Mod picks the real "Microphone" device, not Windows' default (Line In here) · [RAN] log "mic opened: Microphone (Realtek(R) Audio)" · 2026-10-26
+- [x] Debug recordings (saveRecordings) save the challenge + each phrase as WAV · [RAN] 4 files written · 2026-10-26
 - [ ] Push-to-talk mode (hold V) · untested
 - [ ] Sound actually audible through speakers · owner (I can't hear)
 - [ ] Fun/feel: 15 s, freeze, message wording · owner

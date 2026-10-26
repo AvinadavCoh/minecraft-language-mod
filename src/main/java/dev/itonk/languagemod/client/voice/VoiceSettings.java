@@ -24,6 +24,10 @@ public final class VoiceSettings {
 	public int audioContext = 1000;
 	/** Give Whisper the word on screen as a hint: far better recognition of single words, slightly more forgiving. */
 	public boolean hintExpectedWord = true;
+	/** Part of the input device's name, e.g. "Realtek". Empty = first real "Microphone" device (the log lists them all). */
+	public String micDevice = "";
+	/** Save what the mic heard to config/languagemod/recordings/ (whole challenge + each phrase sent to Whisper). */
+	public boolean saveRecordings = false;
 	/** Multiplies mic samples before voice detection; raise for a quiet mic. */
 	public float micGain = 1.0f;
 

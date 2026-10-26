@@ -5,6 +5,7 @@ import dev.itonk.languagemod.network.HudPayloads;
 import dev.itonk.languagemod.voice.ModelDownloader;
 import dev.itonk.languagemod.voice.SpeechTranscriber;
 import dev.itonk.languagemod.voice.VoiceActivityDetector;
+import dev.itonk.languagemod.voice.WavWriter;
 import dev.itonk.languagemod.voice.WhisperTranscriber;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
@@ -33,8 +34,11 @@ public final class VoiceInput implements VoiceStatus {
 		return t;
 	});
 	private final VoiceActivityDetector vad = new VoiceActivityDetector();
-	private final MicCapture mic = new MicCapture(this::onFrame);
+	private final MicCapture mic;
 	private final List<float[]> pttFrames = new ArrayList<>();
+	/** Whole-challenge mic audio, kept only when saveRecordings is on. */
+	private final List<float[]> challengeFrames = new ArrayList<>();
+	private final Path recordingsDir;
 
 	private volatile SpeechTranscriber transcriber;
 	private volatile String state = "starting";
@@ -53,7 +57,12 @@ public final class VoiceInput implements VoiceStatus {
 		this.settings = settings;
 		this.modelDir = modelDir;
 		this.onHeard = onHeard;
+		this.recordingsDir = modelDir.resolveSibling("recordings");
+		this.mic = new MicCapture(this::onFrame, settings.micDevice);
 		mic.setGain(settings.micGain);
+		StringBuilder devices = new StringBuilder();
+		for (var d : MicCapture.captureDevices()) devices.append("\n  - ").append(d.getName());
+		LanguageMod.LOG.info("[voice] capture devices (set \"micDevice\" in voice.json to pick one):{}", devices);
 		if ("off".equalsIgnoreCase(settings.mode)) {
 			setState("voice off (voice.json)", GRAY);
 		} else {
@@ -78,6 +87,14 @@ public final class VoiceInput implements VoiceStatus {
 		challengeOpen = false;
 		generation++;
 		if (!pttHeld) mic.stop();
+		if (settings.saveRecordings) {
+			float[] pcm;
+			synchronized (challengeFrames) {
+				pcm = join(challengeFrames);
+				challengeFrames.clear();
+			}
+			if (pcm.length > 0) worker.execute(() -> save("challenge", pcm, null));
+		}
 	}
 
 	/** Push-to-talk: called every client tick with whether the Talk key is held. */
@@ -127,6 +144,11 @@ public final class VoiceInput implements VoiceStatus {
 			return;
 		}
 		if (!challengeOpen) return;
+		if (settings.saveRecordings) {
+			synchronized (challengeFrames) {
+				challengeFrames.add(frame);
+			}
+		}
 
 		boolean allZero = true;
 		for (float s : frame) if (s != 0f) { allZero = false; break; }
@@ -141,7 +163,7 @@ public final class VoiceInput implements VoiceStatus {
 		if (phrase != null) submit(phrase);
 		else if (!thinking) {
 			if (silentFrames > 100 && mic.running()) setState("mic gives pure silence: check Windows mic privacy", RED);
-			else setState(speaking ? "● hearing you…" : "● listening", speaking ? GREEN : GRAY);
+			else setState(speaking ? "● hearing you…" : "● listening · " + shortName(mic.deviceName()), speaking ? GREEN : GRAY);
 		}
 	}
 
@@ -166,6 +188,7 @@ public final class VoiceInput implements VoiceStatus {
 			}
 			thinking = false;
 			String heard = text;
+			if (settings.saveRecordings) save("phrase", pcm, heard);
 			LanguageMod.LOG.info("[voice] heard \"{}\" ({} ms of audio)", heard, pcm.length * 1000 / VoiceActivityDetector.SAMPLE_RATE);
 			setState("● listening", GRAY);
 			if (heard.isBlank()) return;
@@ -215,6 +238,26 @@ public final class VoiceInput implements VoiceStatus {
 			LanguageMod.LOG.error("[voice] no microphone", e);
 			setState("no microphone: " + e.getMessage(), RED);
 		}
+	}
+
+	/** Debug recording: config/languagemod/recordings/KIND-yyyyMMdd-HHmmss[-heard].wav (worker thread). */
+	private void save(String kind, float[] pcm, String heard) {
+		String stamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
+		String suffix = heard == null || heard.isBlank() ? "" : "-" + heard.replaceAll("[^\\p{L}\\p{N}]+", "_");
+		if (suffix.length() > 40) suffix = suffix.substring(0, 40);
+		Path file = recordingsDir.resolve(kind + "-" + stamp + suffix + ".wav");
+		try {
+			WavWriter.write(file, pcm);
+			LanguageMod.LOG.info("[voice] saved {} ({} ms)", file.getFileName(), pcm.length / 16);
+		} catch (Exception e) {
+			LanguageMod.LOG.error("[voice] could not save recording", e);
+		}
+	}
+
+	/** "Microphone (Realtek(R) Audio)" -> "Realtek(R) Audio" for the popup. */
+	private static String shortName(String device) {
+		int open = device.indexOf('(');
+		return open >= 0 && device.endsWith(")") ? device.substring(open + 1, device.length() - 1) : device;
 	}
 
 	private static float[] join(List<float[]> frames) {

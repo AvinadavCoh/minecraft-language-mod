@@ -33,6 +33,22 @@ class WhisperTranscriberIT {
 		}
 	}
 
+	/** -Dwhisper.wav=PATH: transcribe any recording (e.g. a mic test), in 25 s chunks, no hint. */
+	@Test
+	void transcribesGivenRecording() throws Exception {
+		String model = System.getProperty("whisper.model");
+		String file = System.getProperty("whisper.wav");
+		Assumptions.assumeTrue(model != null && !model.isBlank() && Files.isRegularFile(Path.of(model))
+				&& file != null && !file.isBlank(), "no -Dwhisper.wav");
+		float[] pcm = wav(Path.of(file));
+		try (WhisperTranscriber t = new WhisperTranscriber(Path.of(model), Integer.getInteger("whisper.threads", 4))) {
+			long t0 = System.nanoTime();
+			String text = t.transcribe(pcm, System.getProperty("whisper.lang", "ro"), null);
+			System.out.printf("[whisper-it] %s (%d ms audio) -> \"%s\" in %d ms%n", Path.of(file).getFileName(),
+					pcm.length / 16, text, (System.nanoTime() - t0) / 1_000_000);
+		}
+	}
+
 	/** The phrase the voice detector would hand to Whisper. */
 	static float[] cut(float[] pcm) {
 		VoiceActivityDetector vad = new VoiceActivityDetector();

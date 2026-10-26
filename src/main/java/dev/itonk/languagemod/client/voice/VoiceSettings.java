@@ -28,6 +28,13 @@ public final class VoiceSettings {
 	public String micDevice = "";
 	/** Save what the mic heard to config/languagemod/recordings/ (whole challenge + each phrase sent to Whisper). */
 	public boolean saveRecordings = false;
+	/**
+	 * "auto" = use the GPU (official whisper.cpp CUDA build's whisper-server.exe) when it is found,
+	 * CPU until it is ready and whenever it fails; "off" = CPU only.
+	 */
+	public String gpu = "auto";
+	/** Path to whisper-server.exe. Empty = config/languagemod/whisper-gpu/(Release/)whisper-server.exe. */
+	public String gpuServer = "";
 	/** Multiplies mic samples before voice detection; raise for a quiet mic. */
 	public float micGain = 1.0f;
 

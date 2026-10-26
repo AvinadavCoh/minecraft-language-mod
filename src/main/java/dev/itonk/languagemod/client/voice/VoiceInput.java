@@ -7,6 +7,8 @@ import dev.itonk.languagemod.voice.SpeechTranscriber;
 import dev.itonk.languagemod.voice.VoiceActivityDetector;
 import dev.itonk.languagemod.voice.WavWriter;
 import dev.itonk.languagemod.voice.WhisperTranscriber;
+import dev.itonk.languagemod.voice.FallbackTranscriber;
+import dev.itonk.languagemod.voice.WhisperServerTranscriber;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 
@@ -52,6 +54,34 @@ public final class VoiceInput implements VoiceStatus {
 	private volatile String languageCode = "ro";
 	private volatile String expectedWord;
 	private volatile boolean challengeOpen;
+	private final java.util.concurrent.atomic.AtomicLong latestPhrase = new java.util.concurrent.atomic.AtomicLong();
+	private final java.util.concurrent.atomic.AtomicInteger pending = new java.util.concurrent.atomic.AtomicInteger();
+	private volatile boolean speakingNow;
+	private boolean busySent; // guarded by updateBusy()'s lock
+
+	/** Where answers go: the server (packets) or the client-only rules. Called on the client thread. */
+	public interface AnswerRoute {
+		void answer(String text);
+
+		void busy(boolean busy);
+	}
+
+	/** Default route: packets to a server that runs the mod. */
+	public static final AnswerRoute TO_SERVER = new AnswerRoute() {
+		@Override public void answer(String text) {
+			if (ClientPlayNetworking.canSend(HudPayloads.VoiceAnswer.ID)) ClientPlayNetworking.send(new HudPayloads.VoiceAnswer(text));
+		}
+
+		@Override public void busy(boolean busy) {
+			if (ClientPlayNetworking.canSend(HudPayloads.VoiceBusy.ID)) ClientPlayNetworking.send(new HudPayloads.VoiceBusy(busy));
+		}
+	};
+
+	private volatile AnswerRoute route = TO_SERVER;
+
+	public void setRoute(AnswerRoute route) {
+		this.route = route;
+	}
 
 	public VoiceInput(VoiceSettings settings, Path modelDir, Consumer<String> onHeard) {
 		this.settings = settings;
@@ -77,6 +107,10 @@ public final class VoiceInput implements VoiceStatus {
 		this.expectedWord = expectedWord;
 		this.challengeOpen = true;
 		generation++;
+		latestPhrase.incrementAndGet(); // anything still waiting belongs to the previous word
+		synchronized (this) {
+			busySent = false; // the server resets its flag when a challenge starts
+		}
 		synchronized (vad) {
 			vad.reset();
 		}
@@ -86,6 +120,11 @@ public final class VoiceInput implements VoiceStatus {
 	public void onChallengeEnd() {
 		challengeOpen = false;
 		generation++;
+		latestPhrase.incrementAndGet();
+		speakingNow = false;
+		synchronized (this) {
+			busySent = false;
+		}
 		if (!pttHeld) mic.stop();
 		if (settings.saveRecordings) {
 			float[] pcm;
@@ -160,46 +199,73 @@ public final class VoiceInput implements VoiceStatus {
 			phrase = vad.accept(frame);
 			speaking = vad.inSpeech();
 		}
-		if (phrase != null) submit(phrase);
-		else if (!thinking) {
-			if (silentFrames > 100 && mic.running()) setState("mic gives pure silence: check Windows mic privacy", RED);
-			else setState(speaking ? "● hearing you…" : "● listening · " + shortName(mic.deviceName()), speaking ? GREEN : GRAY);
+		speakingNow = speaking;
+		if (phrase != null) {
+			submit(phrase);
+			return;
 		}
+		updateBusy();
+		if (thinking) return;
+		if (silentFrames > 100 && mic.running()) setState("mic gives pure silence: check Windows mic privacy", RED);
+		else setState(speaking ? "● hearing you…" : "● listening · " + shortName(mic.deviceName()), speaking ? GREEN : GRAY);
 	}
 
 	private void submit(float[] pcm) {
 		int gen = generation;
 		String lang = languageCode;
 		String hint = settings.hintExpectedWord ? expectedWord : null;
+		// Only the newest phrase matters: if the player repeats the word while Whisper is busy,
+		// older waiting phrases are skipped instead of piling up (they caused 5-24 s delays).
+		long seq = latestPhrase.incrementAndGet();
+		pending.incrementAndGet();
 		thinking = true;
 		setState("… understanding", YELLOW);
-		long queued = System.nanoTime();
+		updateBusy();
 		LanguageMod.LOG.info("[voice] phrase of {} ms queued for Whisper", pcm.length * 1000 / VoiceActivityDetector.SAMPLE_RATE);
 		worker.execute(() -> {
-			String text;
-			long started = System.nanoTime();
 			try {
-				text = transcriber.transcribe(pcm, lang, hint);
-				LanguageMod.LOG.info("[voice] Whisper took {} ms (waited {} ms in queue)",
-						(System.nanoTime() - started) / 1_000_000, (started - queued) / 1_000_000);
-			} catch (RuntimeException e) {
-				LanguageMod.LOG.error("[voice] Whisper failed", e);
-				text = "";
-			}
-			thinking = false;
-			String heard = text;
-			if (settings.saveRecordings) save("phrase", pcm, heard);
-			LanguageMod.LOG.info("[voice] heard \"{}\" ({} ms of audio)", heard, pcm.length * 1000 / VoiceActivityDetector.SAMPLE_RATE);
-			setState("● listening", GRAY);
-			if (heard.isBlank()) return;
-			MinecraftClient.getInstance().execute(() -> {
-				if (gen != generation) return; // challenge already over
-				onHeard.accept(heard);
-				if (ClientPlayNetworking.canSend(HudPayloads.VoiceAnswer.ID)) {
-					ClientPlayNetworking.send(new HudPayloads.VoiceAnswer(heard));
+				if (seq != latestPhrase.get()) {
+					LanguageMod.LOG.info("[voice] skipped an older phrase (a newer one is waiting)");
+					return;
 				}
-			});
+				String text;
+				long started = System.nanoTime();
+				try {
+					text = transcriber.transcribe(pcm, lang, hint);
+					String engine = transcriber instanceof FallbackTranscriber f ? f.lastEngine() : "CPU";
+					LanguageMod.LOG.info("[voice] Whisper ({}) took {} ms", engine, (System.nanoTime() - started) / 1_000_000);
+				} catch (RuntimeException e) {
+					LanguageMod.LOG.error("[voice] Whisper failed", e);
+					text = "";
+				}
+				String heard = text;
+				if (settings.saveRecordings) save("phrase", pcm, heard);
+				LanguageMod.LOG.info("[voice] heard \"{}\" ({} ms of audio)", heard, pcm.length * 1000 / VoiceActivityDetector.SAMPLE_RATE);
+				if (heard.isBlank()) return;
+				MinecraftClient.getInstance().execute(() -> {
+					if (gen != generation) return; // challenge already over
+					onHeard.accept(heard);
+					route.answer(heard);
+				});
+			} finally {
+				if (pending.decrementAndGet() == 0) {
+					thinking = false;
+					setState("● listening", GRAY);
+				}
+				updateBusy(); // queued after the answer above, so the server sees the answer first
+			}
 		});
+	}
+
+	/**
+	 * Tells the server "still talking / still understanding" so it holds the timer instead of
+	 * failing a challenge whose answer is on its way. Sent only when the value changes.
+	 */
+	private synchronized void updateBusy() {
+		boolean busy = challengeOpen && (speakingNow || pending.get() > 0);
+		if (busy == busySent) return;
+		busySent = busy;
+		MinecraftClient.getInstance().execute(() -> route.busy(busy));
 	}
 
 	// ---- setup (worker thread) ---------------------------------------------------------
@@ -218,7 +284,7 @@ public final class VoiceInput implements VoiceStatus {
 			setState("loading voice model…", YELLOW);
 			WhisperTranscriber whisper = new WhisperTranscriber(model, settings.whisperThreads);
 			whisper.setAudioCtx(settings.audioContext);
-			transcriber = whisper;
+			transcriber = withGpu(model, whisper);
 			setState(settings.pushToTalk() ? "hold V to talk" : "● listening", GRAY);
 			LanguageMod.LOG.info("[voice] Whisper ready ({}), mode={}", settings.model, settings.mode);
 			// A challenge may have opened while the model was loading.
@@ -228,6 +294,31 @@ public final class VoiceInput implements VoiceStatus {
 		} catch (Exception e) {
 			LanguageMod.LOG.error("[voice] could not set up speech-to-text", e);
 			setState("voice off: " + e.getMessage(), RED);
+		}
+	}
+
+	/** Wraps the CPU engine with the GPU helper when one is installed (voice.json "gpu"). */
+	private SpeechTranscriber withGpu(Path model, SpeechTranscriber cpu) {
+		if ("off".equalsIgnoreCase(settings.gpu)) return cpu;
+		Path dir = modelDir.getParent();
+		Path exe = settings.gpuServer.isBlank() ? null : Path.of(settings.gpuServer);
+		if (exe == null) {
+			for (Path p : List.of(dir.resolve("whisper-gpu/whisper-server.exe"), dir.resolve("whisper-gpu/Release/whisper-server.exe"))) {
+				if (java.nio.file.Files.isRegularFile(p)) exe = p;
+			}
+		}
+		if (exe == null || !java.nio.file.Files.isRegularFile(exe)) {
+			LanguageMod.LOG.info("[voice] no GPU Whisper found (put the whisper.cpp CUDA build in {} or set \"gpuServer\"); using the CPU",
+					dir.resolve("whisper-gpu"));
+			return cpu;
+		}
+		try {
+			WhisperServerTranscriber gpu = new WhisperServerTranscriber(exe, model, 4, settings.audioContext,
+					dir.resolve("whisper-gpu.log"), dir.resolve("whisper-gpu.pid"));
+			return new FallbackTranscriber(gpu, cpu);
+		} catch (Exception e) {
+			LanguageMod.LOG.error("[voice] could not start GPU Whisper; using the CPU", e);
+			return cpu;
 		}
 	}
 

@@ -12,7 +12,12 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
+import dev.itonk.languagemod.challenge.InventoryOps;
+import dev.itonk.languagemod.challenge.ServerChallengePlayer;
+import dev.itonk.languagemod.progress.ProgressStore;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.Hand;
+import net.minecraft.util.WorldSavePath;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -34,6 +39,8 @@ public final class LanguageMod implements ModInitializer {
 
 	private static ChallengeManager challenges;
 	private static volatile MinecraftServer server;
+	/** False = act like a server without the mod (bot test for client-only mode). */
+	private static volatile boolean serverRules = true;
 
 	@Override
 	public void onInitialize() {
@@ -47,28 +54,32 @@ public final class LanguageMod implements ModInitializer {
 
 		HudPayloads.register();
 
-		ServerLifecycleEvents.SERVER_STARTED.register(s -> server = s);
+		ServerLifecycleEvents.SERVER_STARTED.register(s -> {
+			server = s;
+			challenges.setStore(new ProgressStore(s.getSavePath(WorldSavePath.ROOT)));
+		});
+		ServerLifecycleEvents.SERVER_STOPPING.register(s -> challenges.saveAll());
 		ServerLifecycleEvents.SERVER_STOPPED.register(s -> server = null);
 
-		ServerTickEvents.END_SERVER_TICK.register(s -> challenges.tick(s));
-		ServerPlayConnectionEvents.JOIN.register((handler, sender, s) -> challenges.onJoin(handler.player));
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, s) -> challenges.onLeave(handler.player));
-		ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> challenges.onRespawn(newPlayer));
-
-		// While frozen the player can't place, use or break with the item either.
-		UseBlockCallback.EVENT.register((player, world, hand, hit) -> blockIfFrozen(player));
-		UseItemCallback.EVENT.register((player, world, hand) -> blockIfFrozen(player));
-		AttackBlockCallback.EVENT.register((player, world, hand, pos, dir) -> blockIfFrozen(player));
-
-		// Voice answers from the client's speech-to-text. Hand off to the server thread explicitly.
-		ServerPlayNetworking.registerGlobalReceiver(HudPayloads.VoiceAnswer.ID, (payload, context) -> {
-			ServerPlayerEntity player = context.player();
-			context.server().execute(() -> challenges.submitAnswer(player, payload.text()));
+		ServerTickEvents.END_SERVER_TICK.register(s -> {
+			if (serverRules) challenges.tick(s);
 		});
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, s) -> {
+			if (serverRules) challenges.onJoin(new ServerChallengePlayer(handler.player));
+		});
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, s) -> challenges.onLeave(new ServerChallengePlayer(handler.player)));
+		ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> challenges.onRespawn(new ServerChallengePlayer(newPlayer)));
+
+		// While a word is asked, the asked item can't be placed or used up (that would dodge the question).
+		// Everything else (mining, other items) keeps working.
+		UseBlockCallback.EVENT.register((player, world, hand, hit) -> blockIfAskedItem(player, hand));
+		UseItemCallback.EVENT.register((player, world, hand) -> blockIfAskedItem(player, hand));
+
+		registerReceivers();
 
 		// While a challenge is open, a plain chat line is the answer (not broadcast to others).
 		ServerMessageEvents.ALLOW_CHAT_MESSAGE.register((message, sender, params) -> {
-			if (!challenges.config().chatAnswers || !challenges.isFrozen(sender)) return true;
+			if (!serverRules || !challenges.config().chatAnswers || !challenges.isFrozen(sender)) return true;
 			challenges.submitAnswer(sender, message.getSignedContent());
 			return false;
 		});
@@ -76,9 +87,47 @@ public final class LanguageMod implements ModInitializer {
 		CommandRegistrationCallback.EVENT.register((dispatcher, registry, env) -> LanguageCommands.register(dispatcher));
 	}
 
-	private static ActionResult blockIfFrozen(PlayerEntity player) {
-		if (player instanceof ServerPlayerEntity sp && challenges.isFrozen(sp)) return ActionResult.FAIL;
-		return ActionResult.PASS;
+	/** The mod's C2S channels; a client sees them in the server's channel list and knows the server runs the mod. */
+	private static void registerReceivers() {
+		// Voice answers from the client's speech-to-text. Hand off to the server thread explicitly.
+		ServerPlayNetworking.registerGlobalReceiver(HudPayloads.VoiceAnswer.ID, (payload, context) -> {
+			ServerPlayerEntity player = context.player();
+			context.server().execute(() -> challenges.submitAnswer(player, payload.text()));
+		});
+
+		ServerPlayNetworking.registerGlobalReceiver(HudPayloads.VoiceBusy.ID, (payload, context) -> {
+			ServerPlayerEntity player = context.player();
+			context.server().execute(() -> challenges.setVoiceBusy(player, payload.busy()));
+		});
+		ServerPlayNetworking.registerGlobalReceiver(HudPayloads.DictionaryRequest.ID, (payload, context) -> {
+			ServerPlayerEntity player = context.player();
+			context.server().execute(() -> ServerPlayNetworking.send(player,
+					new HudPayloads.DictionarySnapshot(challenges.snapshot(player))));
+		});
+	}
+
+	/**
+	 * Test hook: off = this server behaves as if it had no LanguageMod (no rules, no channels),
+	 * so a client joining a new world afterwards runs client-only mode.
+	 */
+	public static void setServerRules(boolean on) {
+		if (on == serverRules) return;
+		serverRules = on;
+		if (on) {
+			registerReceivers();
+		} else {
+			ServerPlayNetworking.unregisterGlobalReceiver(HudPayloads.VoiceAnswer.ID.id());
+			ServerPlayNetworking.unregisterGlobalReceiver(HudPayloads.VoiceBusy.ID.id());
+			ServerPlayNetworking.unregisterGlobalReceiver(HudPayloads.DictionaryRequest.ID.id());
+		}
+	}
+
+	private static ActionResult blockIfAskedItem(PlayerEntity player, Hand hand) {
+		if (!(player instanceof ServerPlayerEntity sp)) return ActionResult.PASS;
+		var challenge = challenges.state(sp).active();
+		if (challenge == null) return ActionResult.PASS;
+		ItemStack held = player.getStackInHand(hand);
+		return !held.isEmpty() && InventoryOps.idOf(held).equals(challenge.itemId()) ? ActionResult.FAIL : ActionResult.PASS;
 	}
 
 	public static ChallengeManager challenges() {

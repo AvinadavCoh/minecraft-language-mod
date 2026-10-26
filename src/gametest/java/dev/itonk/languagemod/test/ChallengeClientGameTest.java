@@ -4,6 +4,7 @@ import dev.itonk.languagemod.LanguageMod;
 import dev.itonk.languagemod.client.LanguageModClient;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.fabricmc.loader.api.FabricLoader;
@@ -60,14 +61,14 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 			ctx.waitTicks(25);
 			check(sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))), "oak log starts a challenge");
 			double speed = sp.getServer().computeOnServer(s -> player(s).getAttributeValue(EntityAttributes.MOVEMENT_SPEED));
-			check(speed == 0.0, "movement speed is 0 while frozen (was " + speed + ")");
+			check(speed > 0.0, "movement is NOT frozen by default (speed " + speed + ")");
 			ctx.takeScreenshot("01-prompt");
 
-			// 2. Walking does nothing
+			// 2. Walking still works while the word is asked (freezeMovement=false is the default)
 			Vec3d before = sp.getServer().computeOnServer(s -> player(s).getEntityPos());
 			ctx.getInput().holdKeyFor(o -> o.forwardKey, 30);
 			Vec3d after = sp.getServer().computeOnServer(s -> player(s).getEntityPos());
-			check(horizontal(before, after) < 0.05, "W key does not move a frozen player (moved " + horizontal(before, after) + ")");
+			check(horizontal(before, after) > 1.0, "W key moves the player during a challenge (moved " + horizontal(before, after) + ")");
 
 			// 3. Drop key (Q) is blocked: select the log's hotbar slot first
 			ctx.runOnClient(c -> c.player.getInventory().setSelectedSlot(0));
@@ -157,8 +158,9 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 			// 7b. Voice: real Romanian speech (edge-tts clips) through detector -> Whisper -> VoiceAnswer packet
 			ctx.waitFor(c -> LanguageModClient.VOICE.ready(), 60 * 20);
 			sp.getServer().runCommand("give @p minecraft:bread 2");
-			ctx.waitTicks(25);
-			check(sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))), "bread asks again after it was lost");
+			// A missed word is a review now: it comes back after the 20 s review gap, not instantly.
+			ctx.waitFor(c -> LanguageModClient.HUD.debugPhase().equals("ASKING"), 30 * 20);
+			check(sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))), "missed bread comes back as a review");
 			ctx.runOnClient(c -> LanguageModClient.VOICE.feedTestAudio(wav("mor")));
 			ctx.waitFor(c -> !LanguageModClient.HUD.debugMask().isEmpty(), 20 * 20);
 			String wrongHeard = ctx.computeOnClient(c -> LanguageModClient.HUD.debugLastAttempt());
@@ -197,7 +199,7 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 				check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugItemKept()), "popup says the item was kept");
 				ctx.waitTicks(60);
 				check(!sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))), "kept item is not asked again during the snooze");
-				ctx.waitFor(c -> LanguageModClient.HUD.debugPhase().equals("ASKING"), 10 * 20);
+				ctx.waitFor(c -> LanguageModClient.HUD.debugPhase().equals("ASKING"), 30 * 20);
 				check(sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))), "kept item is asked again after the snooze");
 				chat(ctx, "morcov");
 				ctx.waitTicks(5);
@@ -207,6 +209,34 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 				sp.getServer().runCommand("languagemod reload");
 			}
 			ctx.waitTicks(40);
+
+			// 7d. Voice grace: time runs out while the voice answer is still coming -> wait; a wrong answer then fails
+			sp.getServer().runCommand("give @p minecraft:potato 2");
+			ctx.waitFor(c -> LanguageModClient.HUD.debugPhase().equals("ASKING"), 10 * 20);
+			sp.getServer().runOnServer(s -> LanguageMod.challenges().setVoiceBusy(player(s), true));
+			ctx.waitTicks(15 * 20 + 40); // 2 s past the deadline
+			check(sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))),
+					"busy voice holds the challenge open past the timer");
+			lastDamage = 0;
+			chat(ctx, "rosie");
+			ctx.waitTicks(5);
+			check(!sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))) && lastDamage == 1.0f,
+					"a wrong answer after the timer ends it as a miss");
+			ctx.waitTicks(40);
+
+			// 7e. The dictionary is saved in the world and shown with J
+			sp.getServer().runOnServer(s -> LanguageMod.challenges().saveAll());
+			Path saved = sp.getServer().computeOnServer(s -> s.getSavePath(net.minecraft.util.WorldSavePath.ROOT)
+					.resolve("languagemod/players/" + player(s).getUuid() + ".json"));
+			String json = read(saved);
+			check(json.contains("minecraft:apple") && json.contains("\"misses\": 1") && json.contains("playTicks"),
+					"progress file saved in the world: " + saved.getFileName());
+			ctx.getInput().pressKey(GLFW.GLFW_KEY_J);
+			ctx.waitForScreen(dev.itonk.languagemod.client.DictionaryScreen.class);
+			ctx.waitTicks(10);
+			ctx.takeScreenshot("09-dictionary");
+			ctx.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
+			ctx.waitTicks(5);
 
 			// 8. Switch to Spanish with /languagemod reload
 			try {
@@ -226,8 +256,59 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 				sp.getServer().runCommand("languagemod reload");
 			}
 
-			LanguageMod.LOG.info("[gametest] ALL CHECKS PASSED");
 		}
+
+		// 9. Client-only mode: the server acts as if it had no LanguageMod (no rules, no channels),
+		//    so the client runs the rules itself. Chat answers must stay off the server.
+		List<String> serverChat = new CopyOnWriteArrayList<>();
+		ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) -> serverChat.add(message.getSignedContent()));
+		LanguageMod.setServerRules(false);
+		try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
+			sp.getClientWorld().waitForChunksRender();
+			sp.getServer().runCommand("gamemode survival @a");
+			sp.getServer().runCommand("time set noon");
+			sp.getServer().runCommand("difficulty peaceful");
+			ctx.waitTicks(60);
+			check(ctx.computeOnClient(c -> LanguageModClient.CLIENT_ONLY.active()), "client-only mode starts on a server without the mod");
+
+			sp.getServer().runCommand("give @p minecraft:apple 3");
+			ctx.waitTicks(25);
+			check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugPhase()).equals("ASKING"), "client-only: new apple opens the popup");
+			ctx.takeScreenshot("10-client-only-prompt");
+			chat(ctx, "mar");
+			ctx.waitTicks(5);
+			check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugPhase()).equals("CORRECT"), "client-only: chat 'mar' answers the apple");
+			check(serverChat.isEmpty(), "client-only: the answer never reached the server chat (" + serverChat + ")");
+			check(count(sp, Items.APPLE) == 3, "client-only: correct answer keeps the apples");
+			ctx.waitTicks(40);
+
+			sp.getServer().runCommand("give @p minecraft:bread 2");
+			ctx.waitTicks(25);
+			check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugPhase()).equals("ASKING"), "client-only: bread opens the popup");
+			// Watch tick by tick: the flash lasts only 10 ticks.
+			for (int i = 0; i < 15 * 20 + 20 && !ctx.computeOnClient(c -> LanguageModClient.HUD.debugPhase()).equals("FAILED"); i++) {
+				ctx.waitTicks(1);
+			}
+			ctx.takeScreenshot("11-client-only-miss");
+			check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugPhase()).equals("FAILED"), "client-only: time's up fails it");
+			check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugHurtTicks()) > 0, "client-only: miss shows the red flash");
+			check(ctx.computeOnClient(c -> c.player.hurtTime) > 0, "client-only: miss plays the hurt camera shake");
+			ctx.waitTicks(3);
+			check(count(sp, Items.BREAD) == 0 && ctx.computeOnClient(c -> c.player.getInventory().count(Items.BREAD)) == 0,
+					"client-only: miss throws the bread out (server inventory agrees)");
+
+			ctx.getInput().pressKey(GLFW.GLFW_KEY_J);
+			ctx.waitForScreen(dev.itonk.languagemod.client.DictionaryScreen.class);
+			ctx.waitTicks(10);
+			ctx.takeScreenshot("12-client-only-dictionary");
+			check(ctx.computeOnClient(c -> LanguageModClient.CLIENT_ONLY.snapshotSize()) >= 2, "client-only: dictionary lists apple and bread");
+			ctx.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
+			ctx.waitTicks(5);
+		} finally {
+			LanguageMod.setServerRules(true);
+		}
+
+		LanguageMod.LOG.info("[gametest] ALL CHECKS PASSED");
 	}
 
 	/** Loads src/gametest/resources/voice/NAME.wav (16 kHz mono s16) as samples in -1..1. */

@@ -25,6 +25,29 @@
   Owner's real voice in PolyMC: 2nd try accepted, ~4.3 s per answer. Debug WAVs: voice.json "saveRecordings": true.
 - Test audio: edge-tts ro-RO-AlinaNeural clips in src/gametest/resources/voice. Real-Whisper IT: `./gradlew test -Dwhisper.model=PATH -Dwhisper.threads=6`.
 
+- 2026-10-26 evening: freezeMovement default false (owner). Per-player WordProgress (progress/) saved to
+  <world>/languagemod/players/<uuid>.json; Leitner boxes 1-5 on play time (5/20/60/180/600 min); reviews only for
+  carried items, priority missed > lowest box > most overdue; 20 s gap between reviews; J = DictionaryScreen.
+- Owner's real voice: Whisper mostly heard "pană"/"pui crud" right, but results were 5-24 s late because every
+  repeat queued another 5 s transcription. Now only the newest phrase is transcribed; client sends VoiceBusy so the
+  server waits (voiceGraceSeconds 10) instead of failing; matching is letters-only + fuzzy (1 slip per 4+ letters).
+- Full dictionary: `python -X utf8 tools/generate_dictionary.py --polymc --lang ro --handwritten
+  src/main/resources/languagemod/defaults/ro.json --out <instance>/config/languagemod/ro.json` (Mojang text, local only).
+
+- 2026-10-26 late: owner plays on a server WITHOUT the mod (a friend's server), so the
+  server-side rules never ran. Decision (owner): client-only mode. ChallengeManager is now side-agnostic via
+  ChallengePlayer (ServerChallengePlayer / client ClientChallengePlayer). ClientOnlyMode starts 2 s after join when the
+  server doesn't list our C2S channels; progress in config/languagemod/servers/<address>/. Miss = red flash +
+  animateDamage shake + Ctrl+Q-style throw (no real damage possible). Chat answers cancelled client-side.
+  Test hook LanguageMod.setServerRules(false) makes the integrated server act modless. Bot 48 PASS.
+
+- GPU voice: whisper-jni 1.7.1 has no CUDA build, so the mod runs the official whisper.cpp CUDA build's
+  whisper-server.exe (v1.9.2 whisper-cublas-12.4.0-bin-x64.zip, 639 MB, sha256 443110dd…; the 11.8 zip lacks cuBLAS and
+  silently runs on CPU) as a 127.0.0.1 helper (WhisperServerTranscriber), FallbackTranscriber -> CPU. Unpacked in
+  .tools/whisper-cuda (gitignored); voice.json "gpu"/"gpuServer". First start on a PC: ~139 s CUDA kernel compile
+  (cached). Measured ~80 ms/answer on the RTX 2060 SUPER. Pid file stops a helper left by a crashed game.
+- Matching: answer inside a longer phrase counts (exact letters for the inner window; fuzzy only on the whole phrase).
+
 ## Next 3 steps
 1. Owner plays in PolyMC and judges feel (timer length, freeze, messages).
 2. Persist `verified` sets per player (currently reset each server start).

@@ -4,12 +4,16 @@
 	"timeoutSeconds": 15,
 	"damage": 1.0,
 	"scanIntervalTicks": 10,
-	"freezeMovement": true,
+	"freezeMovement": false,
 	"challengeItemsHeldOnJoin": false,
 	"skipCreativeAndSpectator": true,
 	"ignoreItemsMissingFromDictionary": true,
 	"wrongAnswerPunishes": false,
 	"chatAnswers": true,
 	"deleteItemOnFail": true,
-	"retryDelaySeconds": 30
+	"retryDelaySeconds": 30,
+	"voiceGraceSeconds": 10,
+	"fuzzyMatch": true,
+	"reviewStepsMinutes": [5, 20, 60, 180, 600],
+	"reviewGapSeconds": 20
 }

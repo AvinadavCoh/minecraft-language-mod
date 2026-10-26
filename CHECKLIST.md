@@ -29,5 +29,24 @@ Bot = `./gradlew runClientGameTest` (src/gametest, real chat/W/Q/F/inventory inp
 - [ ] Push-to-talk mode (hold V) · untested
 - [x] Damage-only option (deleteItemOnFail=false): miss = 1.0 damage, item kept, re-asked after retryDelaySeconds · [RAN] bot + [SAW] 08-damage-only · 2026-10-26
 - [ ] Damage-only in your PolyMC world · installed (on), not played yet
+- [x] Movement freeze off by default (walk while the word is asked) · [RAN] bot (W moves >1 block) · 2026-10-26
+- [x] Only the asked item is blocked from use/placing; mining and other items work · code · 2026-10-26 · untested in game
+- [x] Full Romanian dictionary from Minecraft's ro_ro.json (1,846 ids, hand-written extras kept) · [RAN] generator + loader test · 2026-10-26
+- [x] Whisper spellings of correct answers accepted ("Pa-nă", "Paană", "Pui cruld") · [RAN] unit test on real outputs · 2026-10-26
+- [x] Only the newest phrase is transcribed (no 5-24 s backlog) · code · untested with real voice
+- [x] Time's up while talking/transcribing waits (up to 10 s); wrong answer then = miss · [RAN] bot · 2026-10-26
+- [x] Per-player dictionary saved in the world (boxes, ✓/✗, due times, play-time spacing) · [RAN] unit tests + bot · 2026-10-26
+- [x] Reviews of items you carry, priority: missed > weakest > most overdue; new pickups first · [RAN] unit test · 2026-10-26
+- [x] Dictionary screen (J) with icons, sections, stats · [RAN] bot + [SAW] 09-dictionary · 2026-10-26
+- [x] Join message says the mod is on (+ creative warning); carried items asked 5 s after join, then every 20 s (was 2+ min each) · [RAN] bot 37 PASS, welcome line in log · 2026-10-26 · not seen in PolyMC
+- [x] Client-only mode on servers without the mod: popup, chat answer kept off the server, miss = red flash + hurt shake + stack thrown out, dictionary (J) per server · [RAN] bot 11 checks + [SAW] 10/11/12-client-only · 2026-10-26
+- [x] Client-only mode on your real server (a friend's server) · user tested · 2026-10-26
+- [x] GPU Whisper (official whisper.cpp v1.9.2 CUDA 12.4 whisper-server.exe as helper): ~80 ms per answer vs ~4.6 s CPU, same words · [RAN] WhisperTranscriberIT.transcribesOnGpu · 2026-10-26
+- [x] CPU fallback when no GPU build is installed · [RAN] bot 48 PASS (log "no GPU Whisper found … using the CPU") · 2026-10-26
+- [x] GPU Whisper in your PolyMC game: 156-237 ms per answer, "Torță"/"Scânduri de mesteacăn" correct · [RAN] PolyMC log · 2026-10-26
+- [ ] GPU warm-up on silence at start (first in-game answer took 13.6 s before) · [RAN] IT first answer 89 ms · not yet in a game session
+- [x] Answer counts when said inside a longer phrase ("mor măr", "este pui crud"); exact letters only inside phrases · [RAN] unit test · 2026-10-26
+- [ ] Client-only: asked item can still be dropped/placed (no server to block it) · known gap
+- [ ] Voice in PolyMC after the backlog fix (pană / pui crud) · needs owner
 - [ ] Sound actually audible through speakers · owner (I can't hear)
 - [ ] Fun/feel: 15 s, freeze, message wording · owner

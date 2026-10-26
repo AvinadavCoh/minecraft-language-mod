@@ -13,7 +13,7 @@ import java.nio.file.Path;
  * Not thread-safe: use from one worker thread.
  */
 public final class WhisperTranscriber implements SpeechTranscriber {
-	private static final int MIN_SAMPLES = 16_000 * 3 / 2; // pad to 1.5 s (2 s / 3 s measured: no difference)
+	static final int MIN_SAMPLES = 16_000 * 3 / 2; // pad to 1.5 s (2 s / 3 s measured: no difference)
 	private static boolean libraryLoaded;
 
 	private final WhisperJNI whisper;

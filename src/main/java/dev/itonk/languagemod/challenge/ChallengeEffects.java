@@ -14,9 +14,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 
 /**
  * Chat, popup packets, sound and particles. No game rules live here.
@@ -24,44 +22,35 @@ import net.minecraft.util.Formatting;
  * so a vanilla client on a modded server can still play.
  */
 public final class ChallengeEffects {
-	private static final Text PREFIX = Text.literal("[LanguageMod] ").formatted(Formatting.GOLD);
-
 	private ChallengeEffects() {}
 
 	public static void prompt(ServerPlayerEntity player, ItemStack stack, String word, String languageName,
 			String languageCode, int durationTicks) {
-		player.sendMessage(PREFIX.copy()
-				.append(Text.literal("Name this item in " + languageName + "! ").formatted(Formatting.YELLOW))
-				.append(stack.getName().copy().formatted(Formatting.AQUA))
-				.append(Text.literal(" → ").formatted(Formatting.GRAY))
-				.append(Text.literal(word).formatted(Formatting.WHITE, Formatting.BOLD)), false);
+		player.sendMessage(ChallengeMessages.prompt(stack, word, languageName), false);
 		send(player, new HudPayloads.Start(stack.copyWithCount(1), word, languageName, languageCode, durationTicks));
-		playPrivate(player, SoundEvents.BLOCK_NOTE_BLOCK_BELL, 1f);
+		playSoundPrivate(player, SoundEvents.BLOCK_NOTE_BLOCK_BELL, 1f);
+	}
+
+	public static void welcome(ServerPlayerEntity player, String languageName, int carried, int gapSeconds, boolean off) {
+		for (Text line : ChallengeMessages.welcome(languageName, carried, gapSeconds, off, null)) player.sendMessage(line, false);
 	}
 
 	/** A wrong try while the timer still runs: colour each letter of the word green/red. */
 	public static void attempt(ServerPlayerEntity player, String attempt, String word, boolean[] mask) {
-		MutableText colored = Text.empty();
-		for (int i = 0; i < word.length(); i++) {
-			colored.append(Text.literal(String.valueOf(word.charAt(i))).formatted(mask[i] ? Formatting.GREEN : Formatting.RED));
-		}
-		player.sendMessage(PREFIX.copy().append(Text.literal("\"" + attempt + "\" → ").formatted(Formatting.GRAY)).append(colored), false);
+		player.sendMessage(ChallengeMessages.attempt(attempt, word, mask), false);
 		send(player, new HudPayloads.Attempt(attempt, HudPayloads.toPattern(mask)));
-		playPrivate(player, SoundEvents.BLOCK_NOTE_BLOCK_BASS, 0.7f);
+		playSoundPrivate(player, SoundEvents.BLOCK_NOTE_BLOCK_BASS, 0.7f);
 	}
 
 	public static void success(ServerPlayerEntity player, ItemStack stack) {
-		player.sendMessage(PREFIX.copy().append(Text.literal("Correct! ").formatted(Formatting.GREEN))
-				.append(stack.getName()), false);
+		player.sendMessage(ChallengeMessages.success(stack), false);
 		send(player, new HudPayloads.End(true, true));
-		playPrivate(player, Registries.SOUND_EVENT.getEntry(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP), 1.2f);
+		playSoundPrivate(player, Registries.SOUND_EVENT.getEntry(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP), 1.2f);
 	}
 
 	/** @param kept true when deleteItemOnFail is off: no break sound/particles, just the damage. */
 	public static void failure(ServerPlayerEntity player, ItemStack removed, boolean kept, String reason, String answer) {
-		String hint = answer != null ? " It was: " + answer : "";
-		String outcome = kept ? " (item kept)" : "";
-		player.sendMessage(PREFIX.copy().append(Text.literal(reason + hint + outcome).formatted(Formatting.RED)), false);
+		player.sendMessage(ChallengeMessages.failure(reason, answer, kept ? " (item kept)" : ""), false);
 		send(player, new HudPayloads.End(false, kept));
 		if (kept) return;
 
@@ -82,7 +71,7 @@ public final class ChallengeEffects {
 	}
 
 	/** A sound only this player hears (the prompt/success chimes shouldn't spam everyone nearby). */
-	private static void playPrivate(ServerPlayerEntity player, RegistryEntry<SoundEvent> sound, float pitch) {
+	private static void playSoundPrivate(ServerPlayerEntity player, RegistryEntry<SoundEvent> sound, float pitch) {
 		player.networkHandler.sendPacket(new PlaySoundS2CPacket(sound, SoundCategory.PLAYERS,
 				player.getX(), player.getY(), player.getZ(), 1f, pitch, player.getRandom().nextLong()));
 	}

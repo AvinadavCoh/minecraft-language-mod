@@ -16,7 +16,7 @@ public final class VoiceActivityDetector {
 	public static final int FRAME = 480; // 30 ms
 
 	private static final int PRE_ROLL_FRAMES = 7;     // ~200 ms kept before speech starts
-	private static final int HANGOVER_FRAMES = 20;    // ~600 ms of quiet ends a phrase
+	private static final int HANGOVER_FRAMES = 14;    // ~420 ms of quiet ends a phrase (was 600 ms; owner: feedback too slow)
 	private static final int MIN_SPEECH_FRAMES = 4;   // ~120 ms; "măr" is only ~7 loud frames, clicks are 1-2
 	private static final int MAX_FRAMES = 200;        // 6 s hard cap per phrase
 	private static final float MIN_THRESHOLD = 0.012f;

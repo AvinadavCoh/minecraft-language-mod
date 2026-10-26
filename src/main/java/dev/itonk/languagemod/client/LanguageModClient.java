@@ -6,6 +6,7 @@ import dev.itonk.languagemod.network.HudPayloads;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -21,6 +22,8 @@ import java.nio.file.Path;
 public final class LanguageModClient implements ClientModInitializer {
 	public static final ChallengeHudState HUD = new ChallengeHudState();
 	public static VoiceInput VOICE;
+	/** Runs the rules in this game when the server has no LanguageMod. */
+	public static final ClientOnlyMode CLIENT_ONLY = new ClientOnlyMode();
 
 	@Override
 	public void onInitializeClient() {
@@ -28,8 +31,13 @@ public final class LanguageModClient implements ClientModInitializer {
 		VoiceSettings settings = VoiceSettings.load(dir);
 		VOICE = new VoiceInput(settings, dir.resolve("whisper"), HUD::heard);
 
+		KeyBinding.Category category = KeyBinding.Category.create(Identifier.of("languagemod", "voice"));
 		KeyBinding talkKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.languagemod.talk",
-				InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_V, KeyBinding.Category.create(Identifier.of("languagemod", "voice"))));
+				InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_V, category));
+		KeyBinding dictionaryKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.languagemod.dictionary",
+				InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_J, category));
+		ClientPlayNetworking.registerGlobalReceiver(HudPayloads.DictionarySnapshot.ID,
+				(p, ctx) -> DictionaryScreen.receive(p.entries()));
 
 		// Fabric runs these receivers on the client thread, same thread as rendering.
 		ClientPlayNetworking.registerGlobalReceiver(HudPayloads.Start.ID, (p, ctx) -> {
@@ -46,9 +54,15 @@ public final class LanguageModClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			// Paused singleplayer also pauses the server timer, so pause the bar too.
 			if (!client.isPaused()) HUD.tick();
+			CLIENT_ONLY.tick(client);
 			VOICE.tickPushToTalk(talkKey.isPressed());
+			while (dictionaryKey.wasPressed()) client.setScreen(new DictionaryScreen());
 		});
+		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> CLIENT_ONLY.onJoin());
+		// In client-only mode a chat line while a word is asked is the answer: keep it off the server.
+		ClientSendMessageEvents.ALLOW_CHAT.register(message -> !CLIENT_ONLY.onChat(message));
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+			CLIENT_ONLY.onDisconnect();
 			HUD.reset();
 			VOICE.onChallengeEnd();
 		});

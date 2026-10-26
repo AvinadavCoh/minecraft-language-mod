@@ -4,3 +4,5 @@ run/
 out/
 .idea/
 *.iml
+.tools/
+logs/

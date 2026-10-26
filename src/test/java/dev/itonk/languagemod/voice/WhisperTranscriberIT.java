@@ -33,6 +33,33 @@ class WhisperTranscriberIT {
 		}
 	}
 
+	/** -Dwhisper.gpuServer=PATH to whisper-server.exe: same clips through the GPU helper (mod code path). */
+	@Test
+	void transcribesOnGpu() throws Exception {
+		String model = System.getProperty("whisper.model");
+		String exe = System.getProperty("whisper.gpuServer");
+		Assumptions.assumeTrue(model != null && !model.isBlank() && exe != null && !exe.isBlank()
+				&& Files.isRegularFile(Path.of(exe)), "no -Dwhisper.gpuServer");
+		Path tmp = Files.createTempDirectory("whisper-gpu-it");
+		String[][] cases = {{"mar", "măr"}, {"mor", "măr"}, {"paine", "pâine"}, {"mor", "pâine"}};
+		try (WhisperServerTranscriber t = new WhisperServerTranscriber(Path.of(exe), Path.of(model), 4,
+				Integer.getInteger("whisper.ctxA", 1000), tmp.resolve("server.log"), tmp.resolve("server.pid"))) {
+			long start = System.nanoTime();
+			while (!t.ready() && t.alive() && System.nanoTime() - start < 300_000_000_000L) Thread.sleep(200);
+			org.junit.jupiter.api.Assertions.assertTrue(t.ready(), "GPU helper became ready");
+			System.out.printf("[whisper-gpu-it] ready after %d ms%n", (System.nanoTime() - start) / 1_000_000);
+			for (int round = 0; round < 2; round++) {
+				for (String[] c : cases) {
+					float[] pcm = cut(wav(Path.of("src/gametest/resources/voice/" + c[0] + ".wav")));
+					long t0 = System.nanoTime();
+					String text = t.transcribe(pcm, "ro", c[1]);
+					System.out.printf("[whisper-gpu-it] %s.wav hint=%s -> \"%s\" in %d ms%n", c[0], c[1], text,
+							(System.nanoTime() - t0) / 1_000_000);
+				}
+			}
+		}
+	}
+
 	/** -Dwhisper.wav=PATH: transcribe any recording (e.g. a mic test), in 25 s chunks, no hint. */
 	@Test
 	void transcribesGivenRecording() throws Exception {

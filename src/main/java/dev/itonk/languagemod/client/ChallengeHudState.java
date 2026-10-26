@@ -23,6 +23,9 @@ public final class ChallengeHudState {
 	/** Client ticks since the popup opened (not counted while the game is paused). */
 	int elapsedTicks;
 	int resultTicks;
+	/** Red screen flash after a miss in client-only mode (no real damage there). */
+	int hurtTicks;
+	static final int HURT_TICKS = 10;
 
 	void start(ItemStack stack, String word, String languageName, int durationTicks) {
 		this.phase = Phase.ASKING;
@@ -58,7 +61,12 @@ public final class ChallengeHudState {
 		resultTicks = 0;
 	}
 
+	void hurt() {
+		hurtTicks = HURT_TICKS;
+	}
+
 	void tick() {
+		if (hurtTicks > 0) hurtTicks--;
 		switch (phase) {
 			case ASKING -> elapsedTicks++;
 			case CORRECT, FAILED -> {
@@ -78,6 +86,7 @@ public final class ChallengeHudState {
 	public String debugMask() { return mask == null ? "" : mask; }
 	public String debugLastAttempt() { return lastAttempt; }
 	public boolean debugItemKept() { return itemKept; }
+	public int debugHurtTicks() { return hurtTicks; }
 
 	/** 1 = full bar, 0 = time's up. */
 	float timeLeft(float tickProgress) {

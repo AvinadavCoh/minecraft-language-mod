@@ -37,6 +37,10 @@ public final class ChallengeHudRenderer {
 	}
 
 	public void render(DrawContext ctx, RenderTickCounter tickCounter) {
+		if (state.hurtTicks > 0) {
+			int alpha = 0x70 * state.hurtTicks / ChallengeHudState.HURT_TICKS;
+			ctx.fill(0, 0, ctx.getScaledWindowWidth(), ctx.getScaledWindowHeight(), alpha << 24 | 0xFF0000);
+		}
 		if (state.phase == ChallengeHudState.Phase.HIDDEN) return;
 		MinecraftClient client = MinecraftClient.getInstance();
 		if (client.options.hudHidden) return;

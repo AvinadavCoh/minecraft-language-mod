@@ -87,8 +87,71 @@ public final class TranslationDictionary {
 	}
 
 	public boolean matches(Identifier itemId, String input) {
+		return matches(itemId, input, false);
+	}
+
+	/**
+	 * Compares letters only, so speech-to-text spellings like "Pa-nă" or "Pui crud." match.
+	 * With {@code fuzzy}, small recognition slips are forgiven: 1 wrong letter for words of
+	 * 4+ letters, 2 for 8+. Short words stay exact so "mor" never passes for "măr".
+	 */
+	public boolean matches(Identifier itemId, String input, boolean fuzzy) {
 		Set<String> accepted = answers.get(itemId);
-		return accepted != null && accepted.contains(normalize(input));
+		if (accepted == null) return false;
+		String said = normalize(input);
+		if (accepted.contains(said)) return true;
+		if (sameWord(accepted, lettersOnly(said), fuzzy)) return true;
+		// The answer inside a longer phrase ("e o pâine", "pâine pâine") also counts: try every run
+		// of consecutive words as long as an answer, or one word longer (Whisper splits "Pa-nă").
+		// Exact letters only here: with slips allowed too, some piece of any long phrase would pass.
+		String[] words = said.split(" ");
+		for (String a : accepted) {
+			int n = a.split(" ").length;
+			for (int len = n; len <= n + 1; len++) {
+				for (int start = 0; start + len <= words.length; start++) {
+					if (len == words.length) continue; // the whole phrase was checked above
+					String window = String.join("", java.util.Arrays.copyOfRange(words, start, start + len));
+					if (sameWord(Set.of(a), lettersOnly(window), false)) return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	private static boolean sameWord(Set<String> accepted, String saidLetters, boolean fuzzy) {
+		for (String a : accepted) {
+			String target = lettersOnly(a);
+			if (target.equals(saidLetters)) return true;
+			if (fuzzy) {
+				int allowed = target.length() >= 8 ? 2 : target.length() >= 4 ? 1 : 0;
+				if (allowed > 0 && editDistance(target, saidLetters, allowed) <= allowed) return true;
+			}
+		}
+		return false;
+	}
+
+	private static String lettersOnly(String s) {
+		return s.replaceAll("[^\\p{L}\\p{N}]", "");
+	}
+
+	/** Levenshtein distance, giving up early once it exceeds {@code max}. */
+	static int editDistance(String a, String b, int max) {
+		if (Math.abs(a.length() - b.length()) > max) return max + 1;
+		int[] prev = new int[b.length() + 1];
+		int[] cur = new int[b.length() + 1];
+		for (int j = 0; j <= b.length(); j++) prev[j] = j;
+		for (int i = 1; i <= a.length(); i++) {
+			cur[0] = i;
+			int rowMin = cur[0];
+			for (int j = 1; j <= b.length(); j++) {
+				int sub = prev[j - 1] + (a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1);
+				cur[j] = Math.min(sub, Math.min(prev[j] + 1, cur[j - 1] + 1));
+				rowMin = Math.min(rowMin, cur[j]);
+			}
+			if (rowMin > max) return max + 1;
+			int[] t = prev; prev = cur; cur = t;
+		}
+		return prev[b.length()];
 	}
 
 	/** First listed answer, shown to the player after a miss so they learn it. */

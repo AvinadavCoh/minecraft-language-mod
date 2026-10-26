@@ -52,6 +52,8 @@ test {
 	systemProperty "whisper.ctxA", System.getProperty("whisper.ctxA", "1000")
 	systemProperty "whisper.wav", System.getProperty("whisper.wav", "")
 	systemProperty "whisper.lang", System.getProperty("whisper.lang", "ro")
+	systemProperty "dict.file", System.getProperty("dict.file", "")
+	systemProperty "whisper.gpuServer", System.getProperty("whisper.gpuServer", "")
 	testLogging { showStandardStreams = true }
 }
 

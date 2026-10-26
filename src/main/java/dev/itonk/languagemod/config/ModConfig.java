@@ -21,7 +21,8 @@ public final class ModConfig {
 	public int timeoutSeconds = 15;
 	public float damage = 1.0f;
 	public int scanIntervalTicks = 10;
-	public boolean freezeMovement = true;
+	/** Stop walking/jumping while a word is asked. Off by default (owner, 2026-10-26: too annoying). */
+	public boolean freezeMovement = false;
 	public boolean challengeItemsHeldOnJoin = false;
 	public boolean skipCreativeAndSpectator = true;
 	public boolean ignoreItemsMissingFromDictionary = true;
@@ -31,6 +32,14 @@ public final class ModConfig {
 	public boolean chatAnswers = true;
 	/** true = a miss destroys the stack; false = a miss only deals the damage and you keep the item. */
 	public boolean deleteItemOnFail = true;
+	/** Forgive small speech-to-text slips: 1 wrong letter for words of 4+ letters, 2 for 8+ ("Paană" = "Pană"). */
+	public boolean fuzzyMatch = true;
+	/** Play-time gaps before a word comes back, by box (each right answer moves up a box; a miss resets to 1). */
+	public double[] reviewStepsMinutes = {5, 20, 60, 180, 600};
+	/** After any challenge, wait this long (play time) before starting a review. New pickups don't wait. */
+	public int reviewGapSeconds = 20;
+	/** If the time runs out while the player is speaking or Whisper is still working, wait up to this long for the answer. */
+	public int voiceGraceSeconds = 10;
 	/** When the item is kept after a miss, wait this long before asking about it again. */
 	public int retryDelaySeconds = 30;
 

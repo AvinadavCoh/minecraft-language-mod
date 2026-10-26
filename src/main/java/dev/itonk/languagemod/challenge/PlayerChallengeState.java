@@ -1,29 +1,38 @@
 package dev.itonk.languagemod.challenge;
 
+import dev.itonk.languagemod.progress.WordProgress;
 import net.minecraft.util.Identifier;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Per-player challenge bookkeeping. Only ever touched on the server thread,
  * so plain (non-concurrent) collections are correct here.
  */
 public final class PlayerChallengeState {
-	/** One challenge at a time; the rest wait here in pickup order. */
-	/** {@code word} is the answer shown in the popup (first dictionary entry, accents kept). */
-	public record Challenge(Identifier itemId, int slot, long deadlineTick, String word) {}
+	/**
+	 * One challenge at a time. {@code word} is the answer shown in the popup (first dictionary
+	 * entry, accents kept); {@code review} is false for an item picked up for the first time.
+	 */
+	public record Challenge(Identifier itemId, int slot, long deadlineTick, String word, boolean review) {}
 
-	/** Item types this player has already named correctly (or owned on join). */
-	final Set<Identifier> verified = new HashSet<>();
-	final Deque<Identifier> queue = new ArrayDeque<>();
-	/** Item types missed but kept (deleteItemOnFail=false): server tick until they may be asked again. */
-	final Map<Identifier, Long> snoozedUntil = new HashMap<>();
+	/** This player's saved dictionary (what they know, what is due). */
+	final WordProgress progress;
+	/** Items picked up for the first time, asked before any review, in pickup order. */
+	final Deque<Identifier> newPickups = new ArrayDeque<>();
 	Challenge active;
+	/** Wrong tries in the current challenge. */
+	int wrongTries;
+	/** The client says the player is talking or Whisper is still working on an answer. */
+	boolean voiceBusy;
+	/** Play tick when the last challenge ended (reviews wait reviewGapSeconds after it). */
+	long lastEndPlayTick = Long.MIN_VALUE / 2;
+	boolean dirty;
+
+	PlayerChallengeState(WordProgress progress) {
+		this.progress = progress;
+	}
 
 	public Challenge active() {
 		return active;
@@ -31,15 +40,5 @@ public final class PlayerChallengeState {
 
 	public boolean isFrozen() {
 		return active != null;
-	}
-
-	boolean isKnown(Identifier itemId, long now) {
-		Long snooze = snoozedUntil.get(itemId);
-		if (snooze != null) {
-			if (now < snooze) return true;
-			snoozedUntil.remove(itemId);
-		}
-		return verified.contains(itemId) || queue.contains(itemId)
-				|| (active != null && active.itemId().equals(itemId));
 	}
 }

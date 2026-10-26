@@ -52,7 +52,9 @@ Bot = `./gradlew runClientGameTest` (src/gametest, real chat/W/Q/F/inventory inp
 - [x] Hebrew reads right to left in popup, chat and dictionary · [SAW] zoomed 15/16 · 2026-10-26
 - [x] Separate saved dictionary per language; switching back keeps the old one · [RAN] bot (oak log not re-asked in Romanian) · 2026-10-26
 - [x] J closes the dictionary too · [RAN] bot · 2026-10-26
-- [ ] Russian / Hebrew voice (Whisper on your speech) · untested
+- [ ] Russian / Hebrew voice (Whisper on your speech) · tried on a 2nd PC: Hebrew mostly misheard, one Whisper loop
+- [x] Whisper loop (263 chars for 1 s of Hebrew) no longer disconnects: loops dropped, answers capped at 100 chars · [RAN] VoiceTextTest on the real output + bot 58 PASS · 2026-10-27
+- [ ] Mod works on a second PC (PolyMC, release jar) · user tested: loads, popup, settings, language switch · 2026-10-27
 - [ ] Voice in PolyMC after the backlog fix (pană / pui crud) · needs owner
 - [ ] Sound actually audible through speakers · owner (I can't hear)
 - [ ] Fun/feel: 15 s, freeze, message wording · owner

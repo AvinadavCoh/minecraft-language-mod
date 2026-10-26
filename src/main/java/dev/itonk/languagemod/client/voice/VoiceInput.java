@@ -8,6 +8,7 @@ import dev.itonk.languagemod.voice.VoiceActivityDetector;
 import dev.itonk.languagemod.voice.WavWriter;
 import dev.itonk.languagemod.voice.WhisperTranscriber;
 import dev.itonk.languagemod.voice.FallbackTranscriber;
+import dev.itonk.languagemod.voice.VoiceText;
 import dev.itonk.languagemod.voice.WhisperServerTranscriber;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
@@ -242,7 +243,8 @@ public final class VoiceInput implements VoiceStatus {
 					LanguageMod.LOG.error("[voice] Whisper failed", e);
 					text = "";
 				}
-				String heard = text;
+				String heard = VoiceText.clean(text); // drops Whisper loops, caps the length for the packet
+				if (heard.isEmpty() && !text.isBlank()) LanguageMod.LOG.info("[voice] ignored a Whisper loop ({} chars)", text.length());
 				if (settings.saveRecordings) save("phrase", pcm, heard);
 				LanguageMod.LOG.info("[voice] heard \"{}\" ({} ms of audio)", heard, pcm.length * 1000 / VoiceActivityDetector.SAMPLE_RATE);
 				if (heard.isBlank()) return;

@@ -35,7 +35,7 @@ Inspired by Fawcette's "name every item in another language" challenge videos.
 
 1. Install [Fabric Loader](https://fabricmc.net/use/) 0.17 or newer for Minecraft **1.21.11**
    (or use a launcher like Prism / PolyMC and pick Fabric).
-2. Put [Fabric API](https://modrinth.com/mod/fabric-api) and `language-mod-0.1.0.jar` in your `mods` folder.
+2. Put [Fabric API](https://modrinth.com/mod/fabric-api) and `language-mod-<version>.jar` (from [Releases](https://github.com/AvinadavCoh/minecraft-language-mod/releases)) in your `mods` folder.
 3. Start the game and join a world. The first time, the voice model
    (`ggml-small-q5_1.bin`, 190 MB, from Hugging Face) downloads by itself.
 

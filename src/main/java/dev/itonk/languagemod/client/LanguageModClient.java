@@ -39,7 +39,7 @@ public final class LanguageModClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(HudPayloads.Attempt.ID,
 				(p, ctx) -> HUD.attempt(p.attempt(), p.mask()));
 		ClientPlayNetworking.registerGlobalReceiver(HudPayloads.End.ID, (p, ctx) -> {
-			HUD.end(p.success());
+			HUD.end(p.success(), p.itemKept());
 			VOICE.onChallengeEnd();
 		});
 

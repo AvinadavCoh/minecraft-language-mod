@@ -4,7 +4,9 @@ import net.minecraft.util.Identifier;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -19,6 +21,8 @@ public final class PlayerChallengeState {
 	/** Item types this player has already named correctly (or owned on join). */
 	final Set<Identifier> verified = new HashSet<>();
 	final Deque<Identifier> queue = new ArrayDeque<>();
+	/** Item types missed but kept (deleteItemOnFail=false): server tick until they may be asked again. */
+	final Map<Identifier, Long> snoozedUntil = new HashMap<>();
 	Challenge active;
 
 	public Challenge active() {
@@ -29,7 +33,12 @@ public final class PlayerChallengeState {
 		return active != null;
 	}
 
-	boolean isKnown(Identifier itemId) {
+	boolean isKnown(Identifier itemId, long now) {
+		Long snooze = snoozedUntil.get(itemId);
+		if (snooze != null) {
+			if (now < snooze) return true;
+			snoozedUntil.remove(itemId);
+		}
 		return verified.contains(itemId) || queue.contains(itemId)
 				|| (active != null && active.itemId().equals(itemId));
 	}

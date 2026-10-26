@@ -9,5 +9,7 @@
 	"skipCreativeAndSpectator": true,
 	"ignoreItemsMissingFromDictionary": true,
 	"wrongAnswerPunishes": false,
-	"chatAnswers": true
+	"chatAnswers": true,
+	"deleteItemOnFail": true,
+	"retryDelaySeconds": 30
 }

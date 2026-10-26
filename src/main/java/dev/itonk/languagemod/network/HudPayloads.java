@@ -48,11 +48,12 @@ public final class HudPayloads {
 		}
 	}
 
-	/** S2C: the challenge closed. */
-	public record End(boolean success) implements CustomPayload {
+	/** S2C: the challenge closed. {@code itemKept} is false when a miss destroyed the stack. */
+	public record End(boolean success, boolean itemKept) implements CustomPayload {
 		public static final Id<End> ID = new Id<>(Identifier.of("languagemod", "challenge_end"));
 		public static final PacketCodec<RegistryByteBuf, End> CODEC = PacketCodec.tuple(
 				PacketCodecs.BOOLEAN, End::success,
+				PacketCodecs.BOOLEAN, End::itemKept,
 				End::new);
 
 		@Override

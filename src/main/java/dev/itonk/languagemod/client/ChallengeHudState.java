@@ -46,8 +46,12 @@ public final class ChallengeHudState {
 		if (phase == Phase.ASKING) lastAttempt = text;
 	}
 
-	void end(boolean success) {
+	/** After a miss: false = stack destroyed ("Item lost!"), true = only damage ("Ouch!"). */
+	boolean itemKept;
+
+	void end(boolean success, boolean itemKept) {
 		if (phase != Phase.ASKING) return;
+		this.itemKept = itemKept;
 		phase = success ? Phase.CORRECT : Phase.FAILED;
 		mask = (success ? "G" : "R").repeat(word.length());
 		if (success) lastAttempt = ""; // the wrong try before it is no longer relevant
@@ -73,6 +77,7 @@ public final class ChallengeHudState {
 	public String debugWord() { return word; }
 	public String debugMask() { return mask == null ? "" : mask; }
 	public String debugLastAttempt() { return lastAttempt; }
+	public boolean debugItemKept() { return itemKept; }
 
 	/** 1 = full bar, 0 = time's up. */
 	float timeLeft(float tickProgress) {

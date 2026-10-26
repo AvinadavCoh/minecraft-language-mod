@@ -53,14 +53,17 @@ public final class ChallengeEffects {
 	public static void success(ServerPlayerEntity player, ItemStack stack) {
 		player.sendMessage(PREFIX.copy().append(Text.literal("Correct! ").formatted(Formatting.GREEN))
 				.append(stack.getName()), false);
-		send(player, new HudPayloads.End(true));
+		send(player, new HudPayloads.End(true, true));
 		playPrivate(player, Registries.SOUND_EVENT.getEntry(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP), 1.2f);
 	}
 
-	public static void failure(ServerPlayerEntity player, ItemStack removed, String reason, String answer) {
+	/** @param kept true when deleteItemOnFail is off: no break sound/particles, just the damage. */
+	public static void failure(ServerPlayerEntity player, ItemStack removed, boolean kept, String reason, String answer) {
 		String hint = answer != null ? " It was: " + answer : "";
-		player.sendMessage(PREFIX.copy().append(Text.literal(reason + hint).formatted(Formatting.RED)), false);
-		send(player, new HudPayloads.End(false));
+		String outcome = kept ? " (item kept)" : "";
+		player.sendMessage(PREFIX.copy().append(Text.literal(reason + hint + outcome).formatted(Formatting.RED)), false);
+		send(player, new HudPayloads.End(false, kept));
+		if (kept) return;
 
 		ServerWorld world = player.getEntityWorld();
 		// playSound with a null "except" player -> everyone nearby hears it, including this player.

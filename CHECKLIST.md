@@ -27,5 +27,7 @@ Bot = `./gradlew runClientGameTest` (src/gametest, real chat/W/Q/F/inventory inp
 - [x] Mod picks the real "Microphone" device, not Windows' default (Line In here) · [RAN] log "mic opened: Microphone (Realtek(R) Audio)" · 2026-10-26
 - [x] Debug recordings (saveRecordings) save the challenge + each phrase as WAV · [RAN] 4 files written · 2026-10-26
 - [ ] Push-to-talk mode (hold V) · untested
+- [x] Damage-only option (deleteItemOnFail=false): miss = 1.0 damage, item kept, re-asked after retryDelaySeconds · [RAN] bot + [SAW] 08-damage-only · 2026-10-26
+- [ ] Damage-only in your PolyMC world · installed (on), not played yet
 - [ ] Sound actually audible through speakers · owner (I can't hear)
 - [ ] Fun/feel: 15 s, freeze, message wording · owner

@@ -176,9 +176,39 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 					"spoken 'pâine' is recognised and accepted");
 			ctx.waitTicks(40);
 
-			// 8. Switch to Spanish with /languagemod reload
 			Path config = FabricLoader.getInstance().getConfigDir().resolve("languagemod/config.json");
 			String original = read(config);
+
+			// 7c. deleteItemOnFail=false: a miss only hurts, the item stays, and it is asked again after the snooze
+			try {
+				write(config, original.replace("\"deleteItemOnFail\": true", "\"deleteItemOnFail\": false")
+						.replace("\"retryDelaySeconds\": 30", "\"retryDelaySeconds\": 5"));
+				sp.getServer().runCommand("languagemod reload");
+				ctx.waitTicks(5);
+				lastDamage = 0;
+				sp.getServer().runCommand("give @p minecraft:carrot 3");
+				ctx.waitTicks(25);
+				check(sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))), "carrot starts a challenge");
+				ctx.waitFor(c -> LanguageModClient.HUD.debugPhase().equals("FAILED"), 20 * 20);
+				ctx.waitTicks(2);
+				ctx.takeScreenshot("08-damage-only");
+				check(count(sp, Items.CARROT) == 3, "damage-only miss keeps the carrots (have " + count(sp, Items.CARROT) + ")");
+				check(lastDamage == 1.0f, "damage-only miss still deals 1.0 damage (took " + lastDamage + ")");
+				check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugItemKept()), "popup says the item was kept");
+				ctx.waitTicks(60);
+				check(!sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))), "kept item is not asked again during the snooze");
+				ctx.waitFor(c -> LanguageModClient.HUD.debugPhase().equals("ASKING"), 10 * 20);
+				check(sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))), "kept item is asked again after the snooze");
+				chat(ctx, "morcov");
+				ctx.waitTicks(5);
+				check(!sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))), "'morcov' clears it");
+			} finally {
+				write(config, original);
+				sp.getServer().runCommand("languagemod reload");
+			}
+			ctx.waitTicks(40);
+
+			// 8. Switch to Spanish with /languagemod reload
 			try {
 				write(config, original.replace("\"targetLanguage\": \"ro\"", "\"targetLanguage\": \"es\"")
 						.replace("\"Romanian\"", "\"Spanish\""));

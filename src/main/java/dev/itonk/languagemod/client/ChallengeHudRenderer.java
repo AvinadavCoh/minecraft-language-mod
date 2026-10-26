@@ -45,7 +45,7 @@ public final class ChallengeHudRenderer {
 
 		String label = switch (state.phase) {
 			case CORRECT -> "Correct!";
-			case FAILED -> "Item lost!";
+			case FAILED -> state.itemKept ? "Ouch! Item kept" : "Item lost!";
 			default -> "Say it in " + state.languageName + ":";
 		};
 		String said = state.lastAttempt.isEmpty() ? "" : "you said: " + state.lastAttempt;

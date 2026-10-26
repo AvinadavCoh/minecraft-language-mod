@@ -29,6 +29,10 @@ public final class ModConfig {
 	public boolean wrongAnswerPunishes = false;
 	/** Plain chat messages count as answers while a challenge is open (and aren't broadcast). */
 	public boolean chatAnswers = true;
+	/** true = a miss destroys the stack; false = a miss only deals the damage and you keep the item. */
+	public boolean deleteItemOnFail = true;
+	/** When the item is kept after a miss, wait this long before asking about it again. */
+	public int retryDelaySeconds = 30;
 
 	public static ModConfig load(Path configDir) throws IOException {
 		Path file = configDir.resolve("config.json");

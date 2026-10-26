@@ -90,20 +90,20 @@ public final class ChallengeManager {
 			if (config.skipCreativeAndSpectator && (player.isCreative() || player.isSpectator())) continue;
 
 			PlayerChallengeState state = state(player);
-			if (scan) scanInventory(player, state);
+			if (scan) scanInventory(player, state, now);
 			if (state.active == null) startNext(player, state, now);
 			else if (now >= state.active.deadlineTick()) fail(player, state, "Time's up!");
 		}
 	}
 
 	/** Loops every inventory slot and queues item types the player hasn't named yet. */
-	private void scanInventory(ServerPlayerEntity player, PlayerChallengeState state) {
+	private void scanInventory(ServerPlayerEntity player, PlayerChallengeState state, long now) {
 		PlayerInventory inv = player.getInventory();
 		for (int slot = 0; slot < inv.size(); slot++) {
 			ItemStack stack = inv.getStack(slot);
 			if (stack.isEmpty()) continue;
 			Identifier id = InventoryOps.idOf(stack);
-			if (state.isKnown(id)) continue;
+			if (state.isKnown(id, now)) continue;
 			if (!dictionary.hasEntry(id) && config.ignoreItemsMissingFromDictionary) {
 				state.verified.add(id); // can't be checked, so don't punish
 				continue;
@@ -166,12 +166,20 @@ public final class ChallengeManager {
 
 	private void fail(ServerPlayerEntity player, PlayerChallengeState state, String reason) {
 		PlayerChallengeState.Challenge challenge = state.active;
-		int slot = locate(player.getInventory(), challenge);
-		ItemStack removed = slot >= 0 ? InventoryOps.deleteStack(player, slot) : ItemStack.EMPTY;
+		boolean keep = !config.deleteItemOnFail;
+		ItemStack removed = ItemStack.EMPTY;
+		if (keep) {
+			// Damage only. Without a snooze the next scan would ask again at once, every 15 s.
+			long now = player.getEntityWorld().getServer().getTicks();
+			state.snoozedUntil.put(challenge.itemId(), now + config.retryDelaySeconds * 20L);
+		} else {
+			int slot = locate(player.getInventory(), challenge);
+			if (slot >= 0) removed = InventoryOps.deleteStack(player, slot);
+		}
 
-		// The item type stays unverified: picking it up again asks again.
+		// The item type stays unverified: it is asked again (after the snooze, or when picked up again).
 		clear(player, state);
-		ChallengeEffects.failure(player, removed, reason,
+		ChallengeEffects.failure(player, removed, keep, reason,
 				dictionary.exampleAnswer(challenge.itemId()).orElse(null));
 		player.damage(player.getEntityWorld(), player.getDamageSources().generic(), config.damage);
 	}

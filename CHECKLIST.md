@@ -54,6 +54,9 @@ Bot = `./gradlew runClientGameTest` (src/gametest, real chat/W/Q/F/inventory inp
 - [x] J closes the dictionary too · [RAN] bot · 2026-10-26
 - [ ] Russian / Hebrew voice (Whisper on your speech) · tried on a 2nd PC: Hebrew mostly misheard, one Whisper loop
 - [x] Whisper loop (263 chars for 1 s of Hebrew) no longer disconnects: loops dropped, answers capped at 100 chars · [RAN] VoiceTextTest on the real output + bot 58 PASS · 2026-10-27
+- [x] Renamed "Say It Or Lose It" (mod id stays languagemod so configs/saves carry over) · [RAN] build · 2026-10-27
+- [x] Voice model download asked first ("Not now" remembered, Download button in settings) · [RAN] bot + [SAW] 12b · 2026-10-27
+- [ ] Modrinth + CurseForge listings · texts in docs/listing/LISTING.md; needs owner accounts + icon
 - [ ] Mod works on a second PC (PolyMC, release jar) · user tested: loads, popup, settings, language switch · 2026-10-27
 - [ ] Voice in PolyMC after the backlog fix (pană / pui crud) · needs owner
 - [ ] Sound actually audible through speakers · owner (I can't hear)

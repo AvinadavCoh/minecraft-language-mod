@@ -264,6 +264,17 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 			ctx.waitTicks(5);
 			check(ctx.computeOnClient(c -> c.currentScreen == null), "J closes the dictionary again");
 
+			// 8b2. The voice model download is asked first (players without the model); "Not now" is remembered
+			ctx.runOnClient(c -> LanguageModClient.VOICE.debugAskForModel());
+			ctx.waitForScreen(net.minecraft.client.gui.screen.ConfirmScreen.class);
+			ctx.waitTicks(5);
+			ctx.takeScreenshot("12b-model-download-question");
+			click(ctx, "Not now");
+			ctx.waitTicks(5);
+			check(ctx.computeOnClient(c -> c.currentScreen == null && Boolean.FALSE.equals(LanguageModClient.VOICE.settings().modelDownloadAllowed)),
+					"model download question: 'Not now' closes it and is saved");
+			ctx.runOnClient(c -> LanguageModClient.VOICE.settings().modelDownloadAllowed = null);
+
 			// 8c. Settings screen: switch to Russian with real clicks, answer in Cyrillic
 			ctx.getInput().pressKey(GLFW.GLFW_KEY_K);
 			ctx.waitForScreen(dev.itonk.languagemod.client.SettingsScreen.class);
@@ -320,8 +331,13 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 			check(sp.getServer().computeOnServer(s -> LanguageMod.challenges().config().targetLanguage).equals("ro"), "settings: back to Romanian");
 			sp.getServer().runCommand("give @p minecraft:oak_log 1");
 			ctx.waitTicks(25);
-			check(!sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))),
-					"Romanian progress kept per language: known oak log isn't asked again");
+			// Other carried items may be new in Romanian (the stick was only learned in Spanish), so
+			// check the oak log specifically.
+			String asked = sp.getServer().computeOnServer(s -> {
+				var c = LanguageMod.challenges().state(player(s)).active();
+				return c == null ? "none" : c.itemId().toString();
+			});
+			check(!asked.equals("minecraft:oak_log"), "Romanian progress kept per language: known oak log isn't asked again (asked: " + asked + ")");
 		}
 
 		// 9. Client-only mode: the server acts as if it had no LanguageMod (no rules, no channels),

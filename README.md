@@ -1,4 +1,4 @@
-# Language Mod (Minecraft 1.21.11, Fabric)
+# Say It Or Lose It (Minecraft 1.21.11, Fabric)
 
 Learn a language while you play. Every time a new item lands in your inventory, a popup shows
 the item and its name in the language you're learning. Say it out loud (or type it) before the
@@ -35,9 +35,10 @@ Inspired by Fawcette's "name every item in another language" challenge videos.
 
 1. Install [Fabric Loader](https://fabricmc.net/use/) 0.17 or newer for Minecraft **1.21.11**
    (or use a launcher like Prism / PolyMC and pick Fabric).
-2. Put [Fabric API](https://modrinth.com/mod/fabric-api) and `language-mod-<version>.jar` (from [Releases](https://github.com/AvinadavCoh/minecraft-language-mod/releases)) in your `mods` folder.
-3. Start the game and join a world. The first time, the voice model
-   (`ggml-small-q5_1.bin`, 190 MB, from Hugging Face) downloads by itself.
+2. Put [Fabric API](https://modrinth.com/mod/fabric-api) and `say-it-or-lose-it-<version>.jar` (from [Releases](https://github.com/AvinadavCoh/minecraft-language-mod/releases)) in your `mods` folder.
+3. Start the game and join a world. The first time, the mod asks whether to download the voice
+   model (`ggml-small-q5_1.bin`, 190 MB, from Hugging Face). Say no to type your answers instead;
+   you can download it later from the settings (K).
 
 ## Keys
 

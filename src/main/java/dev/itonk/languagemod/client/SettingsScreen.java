@@ -43,7 +43,7 @@ public final class SettingsScreen extends Screen {
 	private String message = "";
 
 	public SettingsScreen(Screen parent) {
-		super(Text.literal("Language Mod settings"));
+		super(Text.literal("Say It Or Lose It: settings"));
 		this.parent = parent;
 	}
 
@@ -79,6 +79,14 @@ public final class SettingsScreen extends Screen {
 		y += 8;
 		cycle(x, y += ROW, () -> "Voice: " + VOICE_NAMES[voiceMode], true, () -> voiceMode = (voiceMode + 1) % VOICE_MODES.length);
 		cycle(x, y += ROW, () -> "Speech engine: " + (gpu ? "GPU when available" : "CPU only"), true, () -> gpu = !gpu);
+		boolean present = LanguageModClient.VOICE.modelPresent();
+		ButtonWidget model = ButtonWidget.builder(Text.literal(present ? "Voice model: downloaded" : "Download voice model (190 MB)"), b -> {
+			LanguageModClient.VOICE.answerModelDownload(true);
+			b.setMessage(Text.literal("Downloading voice model..."));
+			b.active = false;
+		}).dimensions(x, y += ROW, W, 20).build();
+		model.active = !present;
+		addDrawableChild(model);
 		addDrawableChild(ButtonWidget.builder(Text.literal("Done"), b -> save()).dimensions(x, height - 30, W / 2 - 2, 20).build());
 		addDrawableChild(ButtonWidget.builder(Text.literal("Cancel"), b -> close()).dimensions(x + W / 2 + 2, height - 30, W / 2 - 2, 20).build());
 	}
@@ -96,7 +104,7 @@ public final class SettingsScreen extends Screen {
 	public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
 		super.render(ctx, mouseX, mouseY, delta);
 		ctx.drawCenteredTextWithShadow(textRenderer, title, width / 2, 14, 0xFFFFFFFF);
-		int y = 40 + 5 * ROW + 8 + 6;
+		int y = 40 + 6 * ROW + 8 + 6;
 		if (rulesLocked()) {
 			ctx.drawCenteredTextWithShadow(textRenderer, "This server runs the mod: its own config sets the rules.", width / 2, y, 0xFFAAAAAA);
 			y += 12;
@@ -128,7 +136,7 @@ public final class SettingsScreen extends Screen {
 					LanguageModClient.HUD.reset();
 					LanguageModClient.VOICE.onChallengeEnd();
 					if (client.player != null) {
-						client.player.sendMessage(Text.literal("[LanguageMod] Now learning " + lang.name()
+						client.player.sendMessage(Text.literal("[Say It] Now learning " + lang.name()
 								+ ". Your " + lang.name() + " dictionary is separate from the others."), false);
 					}
 				}

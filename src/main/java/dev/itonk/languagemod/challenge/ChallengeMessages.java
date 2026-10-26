@@ -10,7 +10,7 @@ import java.util.List;
 
 /** The chat lines, built the same way on the server and in client-only mode. Text only, no sending. */
 public final class ChallengeMessages {
-	private static final Text PREFIX = Text.literal("[LanguageMod] ").formatted(Formatting.GOLD);
+	private static final Text PREFIX = Text.literal("[Say It] ").formatted(Formatting.GOLD);
 
 	private ChallengeMessages() {}
 

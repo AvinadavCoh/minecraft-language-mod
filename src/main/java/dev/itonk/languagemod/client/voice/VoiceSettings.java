@@ -18,6 +18,11 @@ public final class VoiceSettings {
 	public String model = "ggml-small-q5_1.bin";
 	public String modelBaseUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/";
 	public boolean autoDownloadModel = true;
+	/**
+	 * The player's answer to "download the voice model?" (asked once, in game). null = not asked yet.
+	 * Nothing is downloaded without a yes; typing answers works either way.
+	 */
+	public Boolean modelDownloadAllowed = null;
 	/** Measured on a Ryzen 5 3600: 6 threads + window 1000 -> ~4 s per answer, all test words right. */
 	public int whisperThreads = Math.max(2, Math.min(8, Runtime.getRuntime().availableProcessors() / 2));
 	/** Whisper encoder window in frames (50 = 1 s). 1500 = full/slowest; below ~1000 it adds junk endings. */
@@ -43,6 +48,8 @@ public final class VoiceSettings {
 		// -Dlanguagemod.voice.mode=... overrides the file (the bot test uses it so a real mic can't interfere).
 		String forced = System.getProperty("languagemod.voice.mode");
 		if (forced != null) s.mode = forced;
+		// The bot test pre-answers the download question (-Dlanguagemod.voice.allowDownload=true).
+		if (Boolean.getBoolean("languagemod.voice.allowDownload")) s.modelDownloadAllowed = true;
 		return s;
 	}
 

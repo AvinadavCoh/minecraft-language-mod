@@ -19,7 +19,7 @@ public final class LanguageCommands {
 							ServerPlayerEntity player = ctx.getSource().getPlayerOrThrow();
 							String answer = StringArgumentType.getString(ctx, "answer");
 							if (!LanguageMod.challenges().submitAnswer(player, answer)) {
-								ctx.getSource().sendError(Text.literal("[LanguageMod] Nothing to verify right now."));
+								ctx.getSource().sendError(Text.literal("[Say It] Nothing to verify right now."));
 								return 0;
 							}
 							return 1;
@@ -29,7 +29,7 @@ public final class LanguageCommands {
 				.requires(CommandManager.requirePermissionLevel(CommandManager.GAMEMASTERS_CHECK))
 				.then(CommandManager.literal("reload").executes(ctx -> {
 					String result = LanguageMod.reload();
-					ctx.getSource().sendFeedback(() -> Text.literal("[LanguageMod] " + result), true);
+					ctx.getSource().sendFeedback(() -> Text.literal("[Say It] " + result), true);
 					return 1;
 				})));
 	}

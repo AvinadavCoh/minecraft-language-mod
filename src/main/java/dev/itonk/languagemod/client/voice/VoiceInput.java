@@ -105,6 +105,34 @@ public final class VoiceInput implements VoiceStatus {
 		return settings;
 	}
 
+	private volatile boolean needsConsent;
+
+	/** Test hook: act as if the model were missing and the player not asked yet. */
+	public void debugAskForModel() {
+		needsConsent = true;
+	}
+
+	/** The voice model isn't downloaded and the player hasn't been asked yet. */
+	public boolean needsModelConsent() {
+		return needsConsent;
+	}
+
+	public boolean modelPresent() {
+		return java.nio.file.Files.isRegularFile(modelDir.resolve(settings.model));
+	}
+
+	/** The player's answer (client thread). Yes starts the download and loads the model. */
+	public void answerModelDownload(boolean yes) {
+		needsConsent = false;
+		settings.modelDownloadAllowed = yes;
+		try {
+			settings.save(modelDir.getParent());
+		} catch (java.io.IOException e) {
+			LanguageMod.LOG.error("[voice] could not save voice.json", e);
+		}
+		if (yes && transcriber == null && !"off".equalsIgnoreCase(settings.mode)) worker.execute(this::loadModel);
+	}
+
 	// ---- lifecycle (client thread) ---------------------------------------------------
 
 	public void onChallengeStart(String languageCode, String expectedWord) {
@@ -279,6 +307,13 @@ public final class VoiceInput implements VoiceStatus {
 	private void loadModel() {
 		Path model = modelDir.resolve(settings.model);
 		try {
+			if (!java.nio.file.Files.isRegularFile(model) && !Boolean.TRUE.equals(settings.modelDownloadAllowed)) {
+				// Ask first (a 190 MB download): LanguageModClient shows the question once in game.
+				needsConsent = settings.modelDownloadAllowed == null;
+				setState("voice off: no voice model (K = settings to download)", GRAY);
+				LanguageMod.LOG.info("[voice] no voice model yet; waiting for the player's OK to download it");
+				return;
+			}
 			if (settings.autoDownloadModel) {
 				ModelDownloader.ensure(settings.modelBaseUrl + settings.model, model,
 						pct -> setState("downloading voice model " + pct + "%", YELLOW));

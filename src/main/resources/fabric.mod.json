@@ -2,8 +2,13 @@
 	"schemaVersion": 1,
 	"id": "languagemod",
 	"version": "${version}",
-	"name": "Language Mod",
-	"description": "Name every new item in your target language or lose it.",
+	"name": "Say It Or Lose It",
+	"description": "Learn a language while you play: say the name of every new item you pick up, or lose it.",
+	"contact": {
+		"homepage": "https://github.com/AvinadavCoh/minecraft-language-mod",
+		"sources": "https://github.com/AvinadavCoh/minecraft-language-mod",
+		"issues": "https://github.com/AvinadavCoh/minecraft-language-mod/issues"
+	},
 	"authors": ["itonk"],
 	"license": "MIT",
 	"environment": "*",

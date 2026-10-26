@@ -25,6 +25,7 @@ public final class LanguageModClient implements ClientModInitializer {
 	/** Toggle keys: the screens close themselves on the same key. */
 	static KeyBinding dictionaryKey;
 	static KeyBinding settingsKey;
+	private static int consentDelay;
 	/** Runs the rules in this game when the server has no LanguageMod. */
 	public static final ClientOnlyMode CLIENT_ONLY = new ClientOnlyMode();
 
@@ -63,6 +64,17 @@ public final class LanguageModClient implements ClientModInitializer {
 			VOICE.tickPushToTalk(talkKey.isPressed());
 			while (dictionaryKey.wasPressed()) client.setScreen(new DictionaryScreen());
 			while (settingsKey.wasPressed()) client.setScreen(new SettingsScreen(null));
+			// Ask once, in game, before the 190 MB voice model is downloaded.
+			if (VOICE.needsModelConsent() && client.player != null && client.currentScreen == null && ++consentDelay > 60) {
+				client.setScreen(new net.minecraft.client.gui.screen.ConfirmScreen(yes -> {
+					VOICE.answerModelDownload(yes);
+					client.setScreen(null);
+				}, net.minecraft.text.Text.literal("Download the voice model?"),
+						net.minecraft.text.Text.literal("To answer by voice, Say It Or Lose It needs a speech model: ggml-small-q5_1.bin, 190 MB, "
+								+ "from huggingface.co (ggerganov/whisper.cpp). It runs on your PC; your voice is never sent anywhere. "
+								+ "No = type your answers in chat. You can download it later in Settings (K)."),
+						net.minecraft.text.Text.literal("Download"), net.minecraft.text.Text.literal("Not now")));
+			}
 		});
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> CLIENT_ONLY.onJoin());
 		// In client-only mode a chat line while a word is asked is the answer: keep it off the server.

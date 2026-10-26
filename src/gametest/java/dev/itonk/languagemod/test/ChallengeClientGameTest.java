@@ -19,6 +19,8 @@ import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -152,6 +154,28 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 			ctx.waitTicks(25);
 			check(!sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))), "already-verified oak log is not asked again");
 
+			// 7b. Voice: real Romanian speech (edge-tts clips) through detector -> Whisper -> VoiceAnswer packet
+			ctx.waitFor(c -> LanguageModClient.VOICE.ready(), 60 * 20);
+			sp.getServer().runCommand("give @p minecraft:bread 2");
+			ctx.waitTicks(25);
+			check(sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))), "bread asks again after it was lost");
+			ctx.runOnClient(c -> LanguageModClient.VOICE.feedTestAudio(wav("mor")));
+			ctx.waitFor(c -> !LanguageModClient.HUD.debugMask().isEmpty(), 20 * 20);
+			String wrongHeard = ctx.computeOnClient(c -> LanguageModClient.HUD.debugLastAttempt());
+			LanguageMod.LOG.info("[gametest] whisper heard '{}' for mor.wav, mask {}", wrongHeard,
+					ctx.computeOnClient(c -> LanguageModClient.HUD.debugMask()));
+			check(count(sp, Items.BREAD) == 2 && sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))),
+					"spoken wrong word is a retry, not a loss");
+			ctx.takeScreenshot("06-voice-wrong");
+			ctx.runOnClient(c -> LanguageModClient.VOICE.feedTestAudio(wav("paine")));
+			ctx.waitFor(c -> !LanguageModClient.HUD.debugPhase().equals("ASKING"), 20 * 20);
+			String rightHeard = ctx.computeOnClient(c -> LanguageModClient.HUD.debugLastAttempt());
+			LanguageMod.LOG.info("[gametest] whisper heard '{}' for paine.wav", rightHeard);
+			ctx.takeScreenshot("07-voice-correct");
+			check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugPhase()).equals("CORRECT") && count(sp, Items.BREAD) == 2,
+					"spoken 'pâine' is recognised and accepted");
+			ctx.waitTicks(40);
+
 			// 8. Switch to Spanish with /languagemod reload
 			Path config = FabricLoader.getInstance().getConfigDir().resolve("languagemod/config.json");
 			String original = read(config);
@@ -173,6 +197,27 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 			}
 
 			LanguageMod.LOG.info("[gametest] ALL CHECKS PASSED");
+		}
+	}
+
+	/** Loads src/gametest/resources/voice/NAME.wav (16 kHz mono s16) as samples in -1..1. */
+	private static float[] wav(String name) {
+		try (var in = ChallengeClientGameTest.class.getResourceAsStream("/voice/" + name + ".wav")) {
+			ByteBuffer b = ByteBuffer.wrap(in.readAllBytes()).order(ByteOrder.LITTLE_ENDIAN);
+			int pos = 12; // after "RIFF....WAVE"
+			while (pos + 8 <= b.limit()) {
+				String id = new String(new byte[] {b.get(pos), b.get(pos + 1), b.get(pos + 2), b.get(pos + 3)});
+				int size = b.getInt(pos + 4);
+				if (id.equals("data")) {
+					float[] out = new float[size / 2];
+					for (int i = 0; i < out.length; i++) out[i] = b.getShort(pos + 8 + 2 * i) / 32768f;
+					return out;
+				}
+				pos += 8 + size + (size & 1);
+			}
+			throw new IllegalStateException("no data chunk in " + name);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
 		}
 	}
 

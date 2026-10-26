@@ -122,7 +122,7 @@ public final class ChallengeManager {
 			String word = dictionary.exampleAnswer(id).orElse("?");
 			state.active = new PlayerChallengeState.Challenge(id, slot, now + duration, word);
 			if (config.freezeMovement) FreezeControl.freeze(player);
-			ChallengeEffects.prompt(player, inv.getStack(slot), word, config.targetLanguageName, duration);
+			ChallengeEffects.prompt(player, inv.getStack(slot), word, config.targetLanguageName, config.targetLanguage, duration);
 			return;
 		}
 	}

@@ -28,13 +28,14 @@ public final class ChallengeEffects {
 
 	private ChallengeEffects() {}
 
-	public static void prompt(ServerPlayerEntity player, ItemStack stack, String word, String languageName, int durationTicks) {
+	public static void prompt(ServerPlayerEntity player, ItemStack stack, String word, String languageName,
+			String languageCode, int durationTicks) {
 		player.sendMessage(PREFIX.copy()
 				.append(Text.literal("Name this item in " + languageName + "! ").formatted(Formatting.YELLOW))
 				.append(stack.getName().copy().formatted(Formatting.AQUA))
 				.append(Text.literal(" → ").formatted(Formatting.GRAY))
 				.append(Text.literal(word).formatted(Formatting.WHITE, Formatting.BOLD)), false);
-		send(player, new HudPayloads.Start(stack.copyWithCount(1), word, languageName, durationTicks));
+		send(player, new HudPayloads.Start(stack.copyWithCount(1), word, languageName, languageCode, durationTicks));
 		playPrivate(player, SoundEvents.BLOCK_NOTE_BLOCK_BELL, 1f);
 	}
 

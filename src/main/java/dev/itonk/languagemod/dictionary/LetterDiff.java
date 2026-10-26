@@ -17,7 +17,7 @@ public final class LetterDiff {
 	/** @return one flag per char of {@code target}: true = matched (green), false = wrong (red). */
 	public static boolean[] matchMask(String target, String attempt) {
 		char[] t = fold(target);
-		char[] a = fold(attempt.trim().replaceAll("\\s+", " "));
+		char[] a = fold(attempt.replaceAll("[\\p{P}\\p{S}]", " ").trim().replaceAll("\\s+", " "));
 		int n = t.length, m = a.length;
 
 		int[][] cost = new int[n + 1][m + 1];

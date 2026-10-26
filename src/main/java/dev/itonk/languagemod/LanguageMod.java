@@ -6,6 +6,7 @@ import dev.itonk.languagemod.config.ModConfig;
 import dev.itonk.languagemod.dictionary.TranslationDictionary;
 import dev.itonk.languagemod.network.HudPayloads;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
@@ -58,6 +59,12 @@ public final class LanguageMod implements ModInitializer {
 		UseBlockCallback.EVENT.register((player, world, hand, hit) -> blockIfFrozen(player));
 		UseItemCallback.EVENT.register((player, world, hand) -> blockIfFrozen(player));
 		AttackBlockCallback.EVENT.register((player, world, hand, pos, dir) -> blockIfFrozen(player));
+
+		// Voice answers from the client's speech-to-text. Hand off to the server thread explicitly.
+		ServerPlayNetworking.registerGlobalReceiver(HudPayloads.VoiceAnswer.ID, (payload, context) -> {
+			ServerPlayerEntity player = context.player();
+			context.server().execute(() -> challenges.submitAnswer(player, payload.text()));
+		});
 
 		// While a challenge is open, a plain chat line is the answer (not broadcast to others).
 		ServerMessageEvents.ALLOW_CHAT_MESSAGE.register((message, sender, params) -> {

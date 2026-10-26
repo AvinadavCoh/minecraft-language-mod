@@ -9,6 +9,15 @@ base {
 	archivesName = project.archives_base_name
 }
 
+loom {
+	runs.configureEach {
+		if (name == "clientGameTest") {
+			// Bot test: never open the real mic (voice is fed from recorded clips instead).
+			vmArg "-Dlanguagemod.voice.mode=push_to_talk"
+		}
+	}
+}
+
 fabricApi {
 	// Client gametest: a bot that plays the challenge through real controls (./gradlew runClientGameTest)
 	configureTests {
@@ -26,6 +35,10 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
+	// Speech-to-text: whisper.cpp via JNI (Apache-2.0, GiviMAD/whisper-jni, bundles win-amd64 natives).
+	// Vetted 2026-10-26: Maven Central, no runtime deps, source on GitHub. Shipped inside the mod jar.
+	include(implementation("io.github.givimad:whisper-jni:${project.whisper_jni_version}"))
+
 	testImplementation platform("org.junit:junit-bom:5.11.4")
 	testImplementation "org.junit.jupiter:junit-jupiter"
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
@@ -33,6 +46,11 @@ dependencies {
 
 test {
 	useJUnitPlatform()
+	// Pass -Dwhisper.model=PATH to also run the real-Whisper integration test.
+	systemProperty "whisper.model", System.getProperty("whisper.model")
+	systemProperty "whisper.threads", System.getProperty("whisper.threads", "4")
+	systemProperty "whisper.ctxA", System.getProperty("whisper.ctxA", "1000")
+	testLogging { showStandardStreams = true }
 }
 
 processResources {

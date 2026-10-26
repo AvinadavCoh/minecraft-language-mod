@@ -12,10 +12,19 @@
 - PolyMC instance `%APPDATA%/PolyMC/instances/LanguageMod-1.21.11` (Fabric loader 0.20.1 + Fabric API + mod jar). Copy `build/libs/language-mod-*.jar` into its `.minecraft/mods` after each build.
 - Gotcha: peaceful regen heals the 1.0 damage within a second, so tests measure the damage event, not health.
 
+- Voice input (client/voice + voice/): open mic during challenges (default) or push-to-talk V; energy VAD cuts phrases;
+  whisper.cpp via whisper-jni 1.7.1 (vetted: Maven Central, GiviMAD/openHAB, Apache-2.0, no runtime deps, bundled AVX2 win DLL;
+  a whisper.dll on PATH overrides it, e.g. a CUDA build). Model ggml-small-q5_1.bin (190 MB, auto-downloaded from
+  huggingface ggerganov/whisper.cpp, sha256 ae85e4a9…). Settings: config/languagemod/voice.json.
+- Measured (Ryzen 5 3600, 6 threads): full 30 s window ~7 s/answer; audioContext 1000 ~4 s, all test words right;
+  below ~750 Whisper adds junk endings ("Mărf"). Phrases < 1 s must be padded (whisper.cpp rejects them).
+  The on-screen word is passed as a prompt hint: "pâine" was misheard as "Pui ne?" without it; "mor" stays "Mor" with it.
+- Test audio: edge-tts ro-RO-AlinaNeural clips in src/gametest/resources/voice. Real-Whisper IT: `./gradlew test -Dwhisper.model=PATH -Dwhisper.threads=6`.
+
 ## Next 3 steps
 1. Owner plays in PolyMC and judges feel (timer length, freeze, messages).
 2. Persist `verified` sets per player (currently reset each server start).
-3. Voice input (the "read it aloud" part): push-to-talk mic -> local Whisper -> `ChallengeManager.submitAnswerFromAnyThread(server, uuid, text)`.
+3. Voice speed: ~4 s per answer on CPU. A CUDA whisper.dll (RTX 2060) on PATH would make it <1 s.
 
 ## Key files
 - `src/main/java/dev/itonk/languagemod/challenge/ChallengeManager.java` — rules (scan, timer, verify, punish)

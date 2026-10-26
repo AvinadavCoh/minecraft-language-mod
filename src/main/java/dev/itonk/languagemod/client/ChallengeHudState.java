@@ -41,6 +41,11 @@ public final class ChallengeHudState {
 		this.mask = mask;
 	}
 
+	/** Speech-to-text result, shown right away while the server judges it. */
+	void heard(String text) {
+		if (phase == Phase.ASKING) lastAttempt = text;
+	}
+
 	void end(boolean success) {
 		if (phase != Phase.ASKING) return;
 		phase = success ? Phase.CORRECT : Phase.FAILED;
@@ -67,6 +72,7 @@ public final class ChallengeHudState {
 	public String debugPhase() { return phase.name(); }
 	public String debugWord() { return word; }
 	public String debugMask() { return mask == null ? "" : mask; }
+	public String debugLastAttempt() { return lastAttempt; }
 
 	/** 1 = full bar, 0 = time's up. */
 	float timeLeft(float tickProgress) {

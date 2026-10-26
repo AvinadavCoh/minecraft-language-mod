@@ -1,5 +1,6 @@
 package dev.itonk.languagemod.client;
 
+import dev.itonk.languagemod.client.voice.VoiceStatus;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -28,8 +29,11 @@ public final class ChallengeHudRenderer {
 
 	private final ChallengeHudState state;
 
-	public ChallengeHudRenderer(ChallengeHudState state) {
+	private final VoiceStatus voice;
+
+	public ChallengeHudRenderer(ChallengeHudState state, VoiceStatus voice) {
 		this.state = state;
+		this.voice = voice;
 	}
 
 	public void render(DrawContext ctx, RenderTickCounter tickCounter) {
@@ -50,7 +54,9 @@ public final class ChallengeHudRenderer {
 		int textW = Math.max(wordW, Math.max(font.getWidth(label), font.getWidth(said)));
 		int iconSize = 16 * ICON_SCALE;
 		int panelW = Math.max(200, PAD + iconSize + PAD + textW + PAD);
-		int panelH = 64;
+		String micText = state.phase == ChallengeHudState.Phase.ASKING ? voice.statusText() : "";
+		int panelH = micText.isEmpty() ? 64 : 76;
+		panelW = Math.max(panelW, PAD + font.getWidth(micText) + 6 + 40 + PAD);
 
 		int x = (ctx.getScaledWindowWidth() - panelW) / 2;
 		int y = 10 + slideOffset(panelH, partial);
@@ -93,6 +99,18 @@ public final class ChallengeHudRenderer {
 		m.popMatrix();
 
 		if (!said.isEmpty()) ctx.drawTextWithShadow(font, said, tx, y + 40, GRAY);
+
+		// Mic status + level meter, just above the time bar.
+		if (!micText.isEmpty()) {
+			int my = y + panelH - 21;
+			ctx.drawTextWithShadow(font, micText, x + PAD, my, voice.statusColor());
+			if (voice.showLevel()) {
+				int mx = x + panelW - PAD - 40;
+				ctx.fill(mx, my + 2, mx + 40, my + 6, DARK);
+				float lvl = Math.min(1f, voice.level() * 8f); // speech RMS is ~0.02-0.15
+				ctx.fill(mx, my + 2, mx + Math.round(40 * lvl), my + 6, voice.statusColor());
+			}
+		}
 
 		// Time bar along the bottom edge.
 		int barX = x + PAD, barW = panelW - 2 * PAD, barY = y + panelH - 9;

@@ -9,19 +9,22 @@ import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.util.Identifier;
 
 /**
- * Server -> client messages that drive the challenge popup. The client only draws;
- * all judging (dictionary, letter matching, timer) stays on the server.
+ * Messages between server and client for the challenge popup and voice answers.
+ * The client only draws and listens; all judging (dictionary, letter matching, timer)
+ * stays on the server.
  */
 public final class HudPayloads {
 	private HudPayloads() {}
 
-	/** A challenge opened: show the item, the word to read, and a full time bar. */
-	public record Start(ItemStack stack, String word, String languageName, int durationTicks) implements CustomPayload {
+	/** S2C: a challenge opened. {@code languageCode} (e.g. "ro") tells speech-to-text what to expect. */
+	public record Start(ItemStack stack, String word, String languageName, String languageCode, int durationTicks)
+			implements CustomPayload {
 		public static final Id<Start> ID = new Id<>(Identifier.of("languagemod", "challenge_start"));
 		public static final PacketCodec<RegistryByteBuf, Start> CODEC = PacketCodec.tuple(
 				ItemStack.PACKET_CODEC, Start::stack,
 				PacketCodecs.STRING, Start::word,
 				PacketCodecs.STRING, Start::languageName,
+				PacketCodecs.STRING, Start::languageCode,
 				PacketCodecs.VAR_INT, Start::durationTicks,
 				Start::new);
 
@@ -31,7 +34,7 @@ public final class HudPayloads {
 		}
 	}
 
-	/** A wrong attempt: {@code mask} has one 'G'/'R' per letter of the word. */
+	/** S2C: a wrong attempt; {@code mask} has one 'G'/'R' per letter of the word. */
 	public record Attempt(String attempt, String mask) implements CustomPayload {
 		public static final Id<Attempt> ID = new Id<>(Identifier.of("languagemod", "challenge_attempt"));
 		public static final PacketCodec<RegistryByteBuf, Attempt> CODEC = PacketCodec.tuple(
@@ -45,7 +48,7 @@ public final class HudPayloads {
 		}
 	}
 
-	/** The challenge closed. */
+	/** S2C: the challenge closed. */
 	public record End(boolean success) implements CustomPayload {
 		public static final Id<End> ID = new Id<>(Identifier.of("languagemod", "challenge_end"));
 		public static final PacketCodec<RegistryByteBuf, End> CODEC = PacketCodec.tuple(
@@ -58,11 +61,25 @@ public final class HudPayloads {
 		}
 	}
 
+	/** C2S: what speech-to-text heard. Judged exactly like a typed answer. */
+	public record VoiceAnswer(String text) implements CustomPayload {
+		public static final Id<VoiceAnswer> ID = new Id<>(Identifier.of("languagemod", "voice_answer"));
+		public static final PacketCodec<RegistryByteBuf, VoiceAnswer> CODEC = PacketCodec.tuple(
+				PacketCodecs.string(200), VoiceAnswer::text,
+				VoiceAnswer::new);
+
+		@Override
+		public Id<? extends CustomPayload> getId() {
+			return ID;
+		}
+	}
+
 	/** Called from the common initializer so both sides know the payload types. */
 	public static void register() {
 		PayloadTypeRegistry.playS2C().register(Start.ID, Start.CODEC);
 		PayloadTypeRegistry.playS2C().register(Attempt.ID, Attempt.CODEC);
 		PayloadTypeRegistry.playS2C().register(End.ID, End.CODEC);
+		PayloadTypeRegistry.playC2S().register(VoiceAnswer.ID, VoiceAnswer.CODEC);
 	}
 
 	public static String toPattern(boolean[] mask) {

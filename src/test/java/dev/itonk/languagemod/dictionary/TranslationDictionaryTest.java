@@ -26,6 +26,8 @@ class TranslationDictionaryTest {
 		assertTrue(ro.matches(oakLog, "  Buștean   de STEJAR "));
 		assertTrue(ro.matches(Identifier.of("minecraft", "apple"), "un măr"));
 		assertTrue(ro.matches(Identifier.of("minecraft", "apple"), "Mărul"));
+		assertTrue(ro.matches(Identifier.of("minecraft", "apple"), " Măr."), "speech-to-text punctuation is ignored");
+		assertTrue(ro.matches(oakLog, "Buștean de stejar!"));
 		assertFalse(ro.matches(oakLog, "roble"));
 		assertFalse(ro.matches(Identifier.of("minecraft", "nether_star"), "stea"));
 	}

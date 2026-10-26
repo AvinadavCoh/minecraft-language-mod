@@ -100,10 +100,10 @@ public final class TranslationDictionary {
 		return stripArticle(normalizeRaw(input), articles);
 	}
 
-	/** Lowercase, drop diacritics (ș -> s, ă -> a), collapse whitespace. */
+	/** Lowercase, drop diacritics (ș -> s, ă -> a) and punctuation (speech-to-text adds "Măr."), collapse whitespace. */
 	private static String normalizeRaw(String s) {
-		String decomposed = Normalizer.normalize(s.trim().toLowerCase(Locale.ROOT), Normalizer.Form.NFD);
-		return decomposed.replaceAll("\\p{M}", "").replaceAll("\\s+", " ");
+		String decomposed = Normalizer.normalize(s.toLowerCase(Locale.ROOT), Normalizer.Form.NFD);
+		return decomposed.replaceAll("\\p{M}", "").replaceAll("[\\p{P}\\p{S}]", " ").trim().replaceAll("\\s+", " ");
 	}
 
 	private static String stripArticle(String s, Set<String> articles) {

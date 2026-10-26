@@ -57,7 +57,7 @@
   BidiText.visualOrder. (First attempt reversed chat twice — caught by zooming the screenshot.)
 
 - Public: https://github.com/AvinadavCoh/minecraft-language-mod (MIT). Server address scrubbed from history before
-  the first push. JDK 21 found via gradle/gradle-daemon-jvm.properties (no machine path in the repo). No release jar yet.
+  the first push. JDK 21 found via gradle/gradle-daemon-jvm.properties (no machine path in the repo). Release v0.1.0 with the jar: /releases/tag/v0.1.0 (sha256 7bfff887…).
 
 ## Next 3 steps
 1. Owner plays in PolyMC and judges feel (timer length, freeze, messages).

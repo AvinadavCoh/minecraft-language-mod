@@ -56,6 +56,9 @@
 - Hebrew: Minecraft's Text/chat path reorders RTL itself even with an English UI; only the per-letter popup word needs
   BidiText.visualOrder. (First attempt reversed chat twice — caught by zooming the screenshot.)
 
+- Public: https://github.com/AvinadavCoh/minecraft-language-mod (MIT). Server address scrubbed from history before
+  the first push. JDK 21 found via gradle/gradle-daemon-jvm.properties (no machine path in the repo). No release jar yet.
+
 ## Next 3 steps
 1. Owner plays in PolyMC and judges feel (timer length, freeze, messages).
 2. Persist `verified` sets per player (currently reset each server start).

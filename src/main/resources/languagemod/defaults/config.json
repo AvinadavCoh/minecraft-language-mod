@@ -7,5 +7,7 @@
 	"freezeMovement": true,
 	"challengeItemsHeldOnJoin": false,
 	"skipCreativeAndSpectator": true,
-	"ignoreItemsMissingFromDictionary": true
+	"ignoreItemsMissingFromDictionary": true,
+	"wrongAnswerPunishes": false,
+	"chatAnswers": true
 }

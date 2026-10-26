@@ -25,6 +25,10 @@ public final class ModConfig {
 	public boolean challengeItemsHeldOnJoin = false;
 	public boolean skipCreativeAndSpectator = true;
 	public boolean ignoreItemsMissingFromDictionary = true;
+	/** false = retry until the timer runs out (letters shown green/red); true = first wrong try punishes. */
+	public boolean wrongAnswerPunishes = false;
+	/** Plain chat messages count as answers while a challenge is open (and aren't broadcast). */
+	public boolean chatAnswers = true;
 
 	public static ModConfig load(Path configDir) throws IOException {
 		Path file = configDir.resolve("config.json");

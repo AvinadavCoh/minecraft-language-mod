@@ -4,6 +4,8 @@ import dev.itonk.languagemod.challenge.ChallengeManager;
 import dev.itonk.languagemod.command.LanguageCommands;
 import dev.itonk.languagemod.config.ModConfig;
 import dev.itonk.languagemod.dictionary.TranslationDictionary;
+import dev.itonk.languagemod.network.HudPayloads;
+import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
@@ -42,6 +44,8 @@ public final class LanguageMod implements ModInitializer {
 			throw new IllegalStateException("[LanguageMod] could not load config/dictionary", e);
 		}
 
+		HudPayloads.register();
+
 		ServerLifecycleEvents.SERVER_STARTED.register(s -> server = s);
 		ServerLifecycleEvents.SERVER_STOPPED.register(s -> server = null);
 
@@ -54,6 +58,13 @@ public final class LanguageMod implements ModInitializer {
 		UseBlockCallback.EVENT.register((player, world, hand, hit) -> blockIfFrozen(player));
 		UseItemCallback.EVENT.register((player, world, hand) -> blockIfFrozen(player));
 		AttackBlockCallback.EVENT.register((player, world, hand, pos, dir) -> blockIfFrozen(player));
+
+		// While a challenge is open, a plain chat line is the answer (not broadcast to others).
+		ServerMessageEvents.ALLOW_CHAT_MESSAGE.register((message, sender, params) -> {
+			if (!challenges.config().chatAnswers || !challenges.isFrozen(sender)) return true;
+			challenges.submitAnswer(sender, message.getSignedContent());
+			return false;
+		});
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registry, env) -> LanguageCommands.register(dispatcher));
 	}

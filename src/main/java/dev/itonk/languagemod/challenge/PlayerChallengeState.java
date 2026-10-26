@@ -13,7 +13,8 @@ import java.util.Set;
  */
 public final class PlayerChallengeState {
 	/** One challenge at a time; the rest wait here in pickup order. */
-	public record Challenge(Identifier itemId, int slot, long deadlineTick) {}
+	/** {@code word} is the answer shown in the popup (first dictionary entry, accents kept). */
+	public record Challenge(Identifier itemId, int slot, long deadlineTick, String word) {}
 
 	/** Item types this player has already named correctly (or owned on join). */
 	final Set<Identifier> verified = new HashSet<>();

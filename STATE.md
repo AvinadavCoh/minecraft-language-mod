@@ -8,13 +8,14 @@
 - Build + unit tests pass; client gametest bot passes 20/20 checks (adds F swap, inventory clicks, particles+sound, reload, Spanish).
 - Played in PolyMC by Claude: dig dirt -> "pământ" correct; craft planks -> wrong answer deleted them. Owner's keybinds: inventory = Tab, drop = Z.
 - Miss message now shows the first listed answer with accents (măr, pâine).
+- Fawcette-style popup (client/ package, HudPayloads S2C): icon + word to read + time bar; wrong tries colour letters (LetterDiff) and retry until timeout (`wrongAnswerPunishes=false`); plain chat = answer (`chatAnswers`). Bot 23/23.
 - PolyMC instance `%APPDATA%/PolyMC/instances/LanguageMod-1.21.11` (Fabric loader 0.20.1 + Fabric API + mod jar). Copy `build/libs/language-mod-*.jar` into its `.minecraft/mods` after each build.
 - Gotcha: peaceful regen heals the 1.0 damage within a second, so tests measure the damage event, not health.
 
 ## Next 3 steps
 1. Owner plays in PolyMC and judges feel (timer length, freeze, messages).
 2. Persist `verified` sets per player (currently reset each server start).
-3. Speech hook: call `ChallengeManager.submitAnswerFromAnyThread(server, uuid, text)` from the Whisper client.
+3. Voice input (the "read it aloud" part): push-to-talk mic -> local Whisper -> `ChallengeManager.submitAnswerFromAnyThread(server, uuid, text)`.
 
 ## Key files
 - `src/main/java/dev/itonk/languagemod/challenge/ChallengeManager.java` — rules (scan, timer, verify, punish)

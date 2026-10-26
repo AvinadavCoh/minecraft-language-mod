@@ -1,0 +1,130 @@
+package dev.itonk.languagemod.client;
+
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.render.RenderTickCounter;
+import org.joml.Matrix3x2fStack;
+
+/**
+ * The challenge popup: item icon, the word to read aloud (letters turn green/red after a
+ * try), and a time bar that drains from green to red. Pure drawing, reads ChallengeHudState.
+ */
+public final class ChallengeHudRenderer {
+	private static final int BG = 0xD8101418;
+	private static final int BG_CORRECT = 0xD8123A1A;
+	private static final int BG_FAILED = 0xD83A1414;
+	private static final int GOLD = 0xFFFFD34E;
+	private static final int GREEN = 0xFF55FF55;
+	private static final int RED = 0xFFFF5555;
+	private static final int WHITE = 0xFFFFFFFF;
+	private static final int GRAY = 0xFFAAAAAA;
+	private static final int DARK = 0xFF2A2A2A;
+
+	private static final int ICON_SCALE = 2;       // 16px item -> 32px
+	private static final float WORD_SCALE = 2f;
+	private static final int PAD = 8;
+	private static final int SLIDE_TICKS = 5;
+
+	private final ChallengeHudState state;
+
+	public ChallengeHudRenderer(ChallengeHudState state) {
+		this.state = state;
+	}
+
+	public void render(DrawContext ctx, RenderTickCounter tickCounter) {
+		if (state.phase == ChallengeHudState.Phase.HIDDEN) return;
+		MinecraftClient client = MinecraftClient.getInstance();
+		if (client.options.hudHidden) return;
+		TextRenderer font = client.textRenderer;
+		float partial = tickCounter.getTickProgress(false);
+
+		String label = switch (state.phase) {
+			case CORRECT -> "Correct!";
+			case FAILED -> "Item lost!";
+			default -> "Say it in " + state.languageName + ":";
+		};
+		String said = state.lastAttempt.isEmpty() ? "" : "you said: " + state.lastAttempt;
+
+		int wordW = Math.round(font.getWidth(state.word) * WORD_SCALE);
+		int textW = Math.max(wordW, Math.max(font.getWidth(label), font.getWidth(said)));
+		int iconSize = 16 * ICON_SCALE;
+		int panelW = Math.max(200, PAD + iconSize + PAD + textW + PAD);
+		int panelH = 64;
+
+		int x = (ctx.getScaledWindowWidth() - panelW) / 2;
+		int y = 10 + slideOffset(panelH, partial);
+
+		int border = switch (state.phase) {
+			case CORRECT -> GREEN;
+			case FAILED -> RED;
+			default -> GOLD;
+		};
+		int bg = switch (state.phase) {
+			case CORRECT -> BG_CORRECT;
+			case FAILED -> BG_FAILED;
+			default -> BG;
+		};
+		ctx.fill(x, y, x + panelW, y + panelH, bg);
+		ctx.drawStrokedRectangle(x - 1, y - 1, panelW + 2, panelH + 2, border);
+
+		// Item icon, scaled up.
+		Matrix3x2fStack m = ctx.getMatrices();
+		m.pushMatrix();
+		m.translate(x + PAD, y + 12);
+		m.scale(ICON_SCALE, ICON_SCALE);
+		ctx.drawItem(state.stack, 0, 0);
+		m.popMatrix();
+
+		int tx = x + PAD + iconSize + PAD;
+		ctx.drawTextWithShadow(font, label, tx, y + 6, state.phase == ChallengeHudState.Phase.ASKING ? GRAY : border);
+
+		// The word, big, one letter at a time so each can take its own colour.
+		m.pushMatrix();
+		m.translate(tx, y + 18);
+		m.scale(WORD_SCALE, WORD_SCALE);
+		int cx = 0;
+		for (int i = 0; i < state.word.length(); i++) {
+			String ch = String.valueOf(state.word.charAt(i));
+			int color = state.mask == null ? WHITE : (state.mask.charAt(i) == 'G' ? GREEN : RED);
+			ctx.drawTextWithShadow(font, ch, cx, 0, color);
+			cx += font.getWidth(ch);
+		}
+		m.popMatrix();
+
+		if (!said.isEmpty()) ctx.drawTextWithShadow(font, said, tx, y + 40, GRAY);
+
+		// Time bar along the bottom edge.
+		int barX = x + PAD, barW = panelW - 2 * PAD, barY = y + panelH - 9;
+		float left = state.phase == ChallengeHudState.Phase.ASKING ? state.timeLeft(partial)
+				: state.phase == ChallengeHudState.Phase.CORRECT ? state.timeLeft(0) : 0f;
+		ctx.fill(barX, barY, barX + barW, barY + 4, DARK);
+		ctx.fill(barX, barY, barX + Math.round(barW * left), barY + 4, barColor(left));
+	}
+
+	/** Slides in from above when it opens and back up after the result has shown. */
+	private int slideOffset(int panelH, float partial) {
+		float t;
+		if (state.phase == ChallengeHudState.Phase.ASKING) {
+			t = Math.min(1f, (state.elapsedTicks + partial) / SLIDE_TICKS);
+		} else {
+			float out = ChallengeHudState.RESULT_TICKS - (state.resultTicks + partial);
+			t = Math.min(1f, out / SLIDE_TICKS);
+		}
+		float eased = 1f - (1f - t) * (1f - t);
+		return Math.round(-(panelH + 12) * (1f - eased));
+	}
+
+	/** Green (full) -> yellow (half) -> red (empty). */
+	private static int barColor(float left) {
+		int r, g;
+		if (left > 0.5f) {
+			r = Math.round(255 * (1f - left) * 2f);
+			g = 255;
+		} else {
+			r = 255;
+			g = Math.round(255 * left * 2f);
+		}
+		return 0xFF000000 | (r << 16) | (g << 8) | 0x40;
+	}
+}

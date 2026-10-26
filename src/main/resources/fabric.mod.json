@@ -8,7 +8,8 @@
 	"license": "MIT",
 	"environment": "*",
 	"entrypoints": {
-		"main": ["dev.itonk.languagemod.LanguageMod"]
+		"main": ["dev.itonk.languagemod.LanguageMod"],
+		"client": ["dev.itonk.languagemod.client.LanguageModClient"]
 	},
 	"mixins": ["languagemod.mixins.json"],
 	"depends": {

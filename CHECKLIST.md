@@ -16,5 +16,10 @@ Bot = `./gradlew runClientGameTest` (src/gametest, real chat/W/Q/F/inventory inp
 - [x] 15 s timeout does the same punishment · [RAN] bot + [SAW] 04-timeout · 2026-10-26
 - [x] Verified item type isn't asked again · [RAN] bot · 2026-10-26
 - [x] `/languagemod reload` + Spanish switch · [RAN] bot + [SAW] 05-spanish-prompt · 2026-10-26
+- [x] Popup: item icon, big word to read, draining time bar (green→red) · [RAN] bot + [SAW] 02b-popup · 2026-10-26
+- [x] Wrong try colours letters green/red, keeps timer (retry) · [RAN] bot ('mor' → GRG) + [SAW] 03-partial · 2026-10-26
+- [x] Plain chat line counts as the answer (no /verify) · [RAN] bot · 2026-10-26
+- [x] Popup result states (green Correct / red Item lost) then hides · [RAN] bot + [SAW] 03b-correct-popup, 04-timeout · 2026-10-26
+- [ ] Popup seen in PolyMC · new jar installed, not played yet (focus taken by another window)
 - [ ] Sound actually audible through speakers · owner (I can't hear)
 - [ ] Fun/feel: 15 s, freeze, message wording · owner

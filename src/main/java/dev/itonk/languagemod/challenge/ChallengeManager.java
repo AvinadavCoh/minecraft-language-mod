@@ -1,6 +1,7 @@
 package dev.itonk.languagemod.challenge;
 
 import dev.itonk.languagemod.config.ModConfig;
+import dev.itonk.languagemod.dictionary.LetterDiff;
 import dev.itonk.languagemod.dictionary.TranslationDictionary;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
@@ -117,16 +118,18 @@ public final class ChallengeManager {
 			Identifier id = state.queue.pollFirst();
 			int slot = InventoryOps.findSlot(inv, id);
 			if (slot < 0) continue; // used up / gone before we got to it; ask again if it comes back
-			state.active = new PlayerChallengeState.Challenge(id, slot, now + config.timeoutSeconds * 20L);
+			int duration = config.timeoutSeconds * 20;
+			String word = dictionary.exampleAnswer(id).orElse("?");
+			state.active = new PlayerChallengeState.Challenge(id, slot, now + duration, word);
 			if (config.freezeMovement) FreezeControl.freeze(player);
-			ChallengeEffects.prompt(player, inv.getStack(slot), config.targetLanguageName, config.timeoutSeconds);
+			ChallengeEffects.prompt(player, inv.getStack(slot), word, config.targetLanguageName, duration);
 			return;
 		}
 	}
 
 	// ---- answers -------------------------------------------------------------------
 
-	/** Gateway for /verify. Returns false if the player had nothing to answer. */
+	/** Gateway for /verify, plain chat and speech. Returns false if the player had nothing to answer. */
 	public boolean submitAnswer(ServerPlayerEntity player, String input) {
 		PlayerChallengeState state = state(player);
 		PlayerChallengeState.Challenge challenge = state.active;
@@ -138,8 +141,11 @@ public final class ChallengeManager {
 			state.verified.add(challenge.itemId());
 			clear(player, state);
 			ChallengeEffects.success(player, shown);
-		} else {
+		} else if (config.wrongAnswerPunishes) {
 			fail(player, state, "\"" + input + "\" is wrong!");
+		} else {
+			// Retry until the timer runs out; show which letters were right.
+			ChallengeEffects.attempt(player, input.trim(), challenge.word(), LetterDiff.matchMask(challenge.word(), input));
 		}
 		return true;
 	}

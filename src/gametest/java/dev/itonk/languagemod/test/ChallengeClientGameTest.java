@@ -1,6 +1,7 @@
 package dev.itonk.languagemod.test;
 
 import dev.itonk.languagemod.LanguageMod;
+import dev.itonk.languagemod.client.LanguageModClient;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -103,34 +104,48 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 			check(count(sp, Items.OAK_LOG) == 8, "correct answer keeps the logs");
 			ctx.takeScreenshot("02-correct");
 
-			// 5. Wrong answer -> stack deleted + half a heart
-			lastDamage = 0;
+			// 5. Popup + partial answer in plain chat: letters go green/red, no punishment, retry allowed
 			sp.getServer().runCommand("give @p minecraft:apple 5");
 			ctx.waitTicks(25);
-			ctx.getInput().pressKey(o -> o.togglePerspectiveKey); // F5: third person, so the particles are in view
-			heardSounds.clear();
-			crackParticles.set(0);
-			chat(ctx, "/verify roble");
-			ctx.waitTicks(2);
-			ctx.takeScreenshot("03-wrong");
-			check(count(sp, Items.APPLE) == 0, "wrong answer deletes the apples");
-			check(lastDamage == 1.0f, "wrong answer deals 1.0 damage (took " + lastDamage + ")");
-			check(heardSounds.contains("minecraft:entity.item.break"), "client played the item-break sound (heard " + heardSounds + ")");
-			check(crackParticles.get() > 0, "client spawned item-break particles (" + crackParticles.get() + ")");
-			check(ctx.computeOnClient(c -> c.player.getInventory().count(Items.APPLE)) == 0, "client inventory shows the apples gone");
-			ctx.getInput().pressKey(o -> o.togglePerspectiveKey);
-			ctx.getInput().pressKey(o -> o.togglePerspectiveKey); // back to first person
+			check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugPhase()).equals("ASKING")
+					&& ctx.computeOnClient(c -> LanguageModClient.HUD.debugWord()).equals("măr"), "popup shows the word 'măr'");
+			ctx.takeScreenshot("02b-popup");
+			chat(ctx, "mor");
+			ctx.waitTicks(5);
+			check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugMask()).equals("GRG"), "'mor' colours m-ă-r as green-red-green ("
+					+ ctx.computeOnClient(c -> LanguageModClient.HUD.debugMask()) + ")");
+			check(count(sp, Items.APPLE) == 5 && sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))),
+					"wrong try keeps the apples and the timer running");
+			ctx.waitTicks(80); // let the bar drain a bit for the screenshot
+			ctx.takeScreenshot("03-partial");
+			chat(ctx, "un măr");
+			ctx.waitTicks(5);
+			check(count(sp, Items.APPLE) == 5 && !sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))),
+					"retry 'un măr' in plain chat is accepted");
+			check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugPhase()).equals("CORRECT"), "popup flips to Correct");
+			ctx.takeScreenshot("03b-correct-popup");
 
-			// 6. Timeout (15 s) -> same punishment
-			ctx.waitTicks(30); // clear the hurt cooldown
+			// 6. Timeout (15 s) -> stack deleted, half a heart, break sound + particles
+			ctx.waitTicks(40);
 			lastDamage = 0;
 			sp.getServer().runCommand("give @p minecraft:bread 3");
 			ctx.waitTicks(25);
 			check(sp.getServer().computeOnServer(s -> LanguageMod.challenges().isFrozen(player(s))), "bread starts a challenge");
-			ctx.waitTicks(15 * 20 + 10);
+			ctx.getInput().pressKey(o -> o.togglePerspectiveKey); // F5: third person, so the particles are in view
+			heardSounds.clear();
+			crackParticles.set(0);
+			ctx.waitFor(c -> LanguageModClient.HUD.debugPhase().equals("FAILED"), 20 * 20);
+			ctx.waitTicks(2);
+			ctx.takeScreenshot("04-timeout");
 			check(count(sp, Items.BREAD) == 0, "timeout deletes the bread");
 			check(lastDamage == 1.0f, "timeout deals 1.0 damage (took " + lastDamage + ")");
-			ctx.takeScreenshot("04-timeout");
+			check(heardSounds.contains("minecraft:entity.item.break"), "client played the item-break sound (heard " + heardSounds + ")");
+			check(crackParticles.get() > 0, "client spawned item-break particles (" + crackParticles.get() + ")");
+			check(ctx.computeOnClient(c -> c.player.getInventory().count(Items.BREAD)) == 0, "client inventory shows the bread gone");
+			ctx.getInput().pressKey(o -> o.togglePerspectiveKey);
+			ctx.getInput().pressKey(o -> o.togglePerspectiveKey); // back to first person
+			ctx.waitTicks(40);
+			check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugPhase()).equals("HIDDEN"), "popup hides after the result");
 
 			// 7. Verified items don't ask again
 			sp.getServer().runCommand("give @p minecraft:oak_log 1");

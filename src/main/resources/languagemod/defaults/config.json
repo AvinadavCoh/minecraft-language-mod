@@ -1,0 +1,11 @@
+{
+	"targetLanguage": "ro",
+	"targetLanguageName": "Romanian",
+	"timeoutSeconds": 15,
+	"damage": 1.0,
+	"scanIntervalTicks": 10,
+	"freezeMovement": true,
+	"challengeItemsHeldOnJoin": false,
+	"skipCreativeAndSpectator": true,
+	"ignoreItemsMissingFromDictionary": true
+}

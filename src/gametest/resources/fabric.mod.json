@@ -1,0 +1,14 @@
+{
+	"schemaVersion": 1,
+	"id": "languagemod-gametest",
+	"version": "1.0.0",
+	"name": "Language Mod client gametest",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-client-gametest": ["dev.itonk.languagemod.test.ChallengeClientGameTest"]
+	},
+	"mixins": ["languagemod-gametest.mixins.json"],
+	"depends": {
+		"languagemod": "*"
+	}
+}

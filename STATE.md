@@ -57,7 +57,7 @@
   BidiText.visualOrder. (First attempt reversed chat twice — caught by zooming the screenshot.)
 
 - Public: https://github.com/AvinadavCoh/minecraft-language-mod (MIT). Server address scrubbed from history before
-  the first push. JDK 21 found via gradle/gradle-daemon-jvm.properties (no machine path in the repo). Releases: v0.1.0, v0.1.1 (Whisper-loop disconnect fix, sha256 29bb860a…).
+  the first push. JDK 21 found via gradle/gradle-daemon-jvm.properties (no machine path in the repo). Releases: v0.1.0, v0.1.1 (Whisper-loop disconnect fix, sha256 29bb860a…), v0.2.0, v0.3.0 (12 languages + readings, sha256 cab9ba81…).
 
 - 2026-10-27: 12 languages (top learned minus English, plus ro/he). Readings under non-Latin words (dictionary/Romanizer):
   ICU4J 77.1 is a Minecraft library (full translit data, zero jar cost): ru = Russian-Latin/BGN, zh = Han-Latin.

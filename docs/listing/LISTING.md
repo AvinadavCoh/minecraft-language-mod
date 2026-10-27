@@ -34,7 +34,8 @@ Inspired by Fawcette's "name every item in another language" challenge.
 - Typed answers: while a word is asked, a chat line is your answer, and nobody else sees it.
 - Your dictionary (J): every word you've met, what you know and what needs repeating. Words come back on a spaced schedule; missed ones first.
 - Settings (K): language, time to answer, what a miss does, voice mode.
-- Languages: Romanian, Spanish, Russian, Hebrew (right to left). Switch any time; each language keeps its own progress.
+- 12 languages: Spanish, French, German, Italian, Portuguese (Brazil), Russian, Japanese, Korean, Chinese (Simplified), Hindi, Romanian, Hebrew (right to left). Switch any time; each language keeps its own progress.
+- Words in other alphabets show how to read them in small Latin letters (עפר → Afar, Торт → Tort, 土 → Tsuchi).
 - Works on any server. With the mod on the server, the server enforces the rules. Without it, the mod runs on your side and a miss shakes your screen instead of dealing real damage.
 
 **Good to know**

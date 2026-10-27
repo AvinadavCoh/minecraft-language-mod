@@ -23,6 +23,7 @@ public final class ChallengeHudRenderer {
 	private static final int WHITE = 0xFFFFFFFF;
 	private static final int GRAY = 0xFFAAAAAA;
 	private static final int DARK = 0xFF2A2A2A;
+	private static final int READING = 0xFF9FC5E8;
 
 	private static final int ICON_SCALE = 2;       // 16px item -> 32px
 	private static final float WORD_SCALE = 2f;
@@ -57,11 +58,13 @@ public final class ChallengeHudRenderer {
 		String said = state.lastAttempt.isEmpty() ? "" : "you said: " + state.lastAttempt;
 
 		int wordW = Math.round(font.getWidth(state.word) * WORD_SCALE);
-		int textW = Math.max(wordW, Math.max(font.getWidth(label), font.getWidth(said)));
+		int textW = Math.max(Math.max(wordW, font.getWidth(state.reading)), Math.max(font.getWidth(label), font.getWidth(said)));
 		int iconSize = 16 * ICON_SCALE;
 		int panelW = Math.max(200, PAD + iconSize + PAD + textW + PAD);
 		String micText = state.phase == ChallengeHudState.Phase.ASKING ? voice.statusText() : "";
-		int panelH = micText.isEmpty() ? 64 : 76;
+		// Room for the small "how to read it" line under the word.
+		int readingH = state.reading.isEmpty() ? 0 : 11;
+		int panelH = (micText.isEmpty() ? 64 : 76) + readingH;
 		panelW = Math.max(panelW, PAD + font.getWidth(micText) + 6 + 40 + PAD);
 
 		int x = (ctx.getScaledWindowWidth() - panelW) / 2;
@@ -106,7 +109,8 @@ public final class ChallengeHudRenderer {
 		}
 		m.popMatrix();
 
-		if (!said.isEmpty()) ctx.drawTextWithShadow(font, Text.literal(said), tx, y + 40, GRAY); // Text: Minecraft reorders Hebrew in it
+		if (readingH > 0) ctx.drawTextWithShadow(font, state.reading, tx, y + 38, READING);
+		if (!said.isEmpty()) ctx.drawTextWithShadow(font, Text.literal(said), tx, y + 40 + readingH, GRAY); // Text: Minecraft reorders Hebrew in it
 
 		// Mic status + level meter, just above the time bar.
 		if (!micText.isEmpty()) {

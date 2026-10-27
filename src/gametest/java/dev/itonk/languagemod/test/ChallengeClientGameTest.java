@@ -280,8 +280,7 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 			ctx.waitForScreen(dev.itonk.languagemod.client.SettingsScreen.class);
 			ctx.waitTicks(5);
 			ctx.takeScreenshot("13-settings");
-			click(ctx, "Language to learn"); // ro -> es
-			click(ctx, "Language to learn"); // es -> ru
+			pickLanguage(ctx, "Russian");
 			check(buttonText(ctx, "Language to learn").endsWith("Russian"), "settings: language button cycles to Russian");
 			click(ctx, "Done");
 			ctx.waitTicks(10);
@@ -292,22 +291,55 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 			ctx.waitTicks(25);
 			String ruWord = ctx.computeOnClient(c -> LanguageModClient.HUD.debugWord());
 			check(ruWord.equals("Торт"), "Russian popup shows the game's own word (" + ruWord + ")");
+			check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugReading()).equals("Tort"), "Russian popup shows how to read it (Tort)");
 			ctx.takeScreenshot("14-russian-prompt");
 			chat(ctx, "торт");
 			ctx.waitTicks(5);
 			check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugPhase()).equals("CORRECT"), "Russian: typed 'торт' is correct");
 			ctx.waitTicks(40);
 
+			// 8c2. The new non-Latin languages: the game's word, its Latin reading, typed answer correct
+			String[][] newLanguages = {
+					{"Japanese", "17-japanese-prompt", "minecraft:feather"}, {"Korean", "18-korean-prompt", "minecraft:bone"},
+					{"Chinese (Simplified)", "19-chinese-prompt", "minecraft:egg"}, {"Hindi", "20-hindi-prompt", "minecraft:string"}};
+			for (String[] lang : newLanguages) {
+				ctx.getInput().pressKey(GLFW.GLFW_KEY_K);
+				ctx.waitForScreen(dev.itonk.languagemod.client.SettingsScreen.class);
+				pickLanguage(ctx, lang[0]);
+				click(ctx, "Done");
+				ctx.waitTicks(10);
+				// An item not carried yet: carried ones come back later as spaced-out reviews.
+				sp.getServer().runCommand("give @p " + lang[2] + " 1");
+				ctx.waitTicks(25);
+				check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugPhase()).equals("ASKING"), lang[0] + ": new item is asked");
+				String word = ctx.computeOnClient(c -> LanguageModClient.HUD.debugWord());
+				String reading = ctx.computeOnClient(c -> LanguageModClient.HUD.debugReading());
+				check(!word.isEmpty() && !word.matches(".*[A-Za-z].*"), lang[0] + " popup shows the game's own word (" + word + ")");
+				check(reading.matches("[\\p{IsLatin}\\p{M} '-]+"), lang[0] + " popup shows a Latin reading (" + reading + ")");
+				ctx.takeScreenshot(lang[1]);
+				chat(ctx, word);
+				ctx.waitTicks(5);
+				check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugPhase()).equals("CORRECT"), lang[0] + ": typed '" + word + "' is correct");
+				ctx.waitTicks(40);
+			}
+			ctx.getInput().pressKey(GLFW.GLFW_KEY_J);
+			ctx.waitForScreen(dev.itonk.languagemod.client.DictionaryScreen.class);
+			ctx.waitTicks(10);
+			ctx.takeScreenshot("21-hindi-dictionary");
+			ctx.getInput().pressKey(GLFW.GLFW_KEY_J);
+			ctx.waitTicks(5);
+
 			// 8d. Hebrew: shown right to left, answered in Hebrew
 			ctx.getInput().pressKey(GLFW.GLFW_KEY_K);
 			ctx.waitForScreen(dev.itonk.languagemod.client.SettingsScreen.class);
-			click(ctx, "Language to learn"); // ru -> he
+			pickLanguage(ctx, "Hebrew");
 			click(ctx, "Done");
 			ctx.waitTicks(10);
 			sp.getServer().runCommand("give @p minecraft:torch 4");
 			ctx.waitTicks(25);
 			String heWord = ctx.computeOnClient(c -> LanguageModClient.HUD.debugWord());
 			check(heWord.equals("לפיד"), "Hebrew popup shows the game's own word (" + heWord + ")");
+			check(ctx.computeOnClient(c -> LanguageModClient.HUD.debugReading()).equals("Lapid"), "Hebrew popup shows how to read it (Lapid)");
 			chat(ctx, "לפוד"); // one wrong letter: popup and chat colour it
 			ctx.waitTicks(5);
 			ctx.takeScreenshot("15-hebrew-prompt");
@@ -325,7 +357,7 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 			// 8e. Back to Romanian: the Romanian dictionary is still there (oak log known, not asked)
 			ctx.getInput().pressKey(GLFW.GLFW_KEY_K);
 			ctx.waitForScreen(dev.itonk.languagemod.client.SettingsScreen.class);
-			click(ctx, "Language to learn"); // he -> ro
+			pickLanguage(ctx, "Romanian");
 			click(ctx, "Done");
 			ctx.waitTicks(10);
 			check(sp.getServer().computeOnServer(s -> LanguageMod.challenges().config().targetLanguage).equals("ro"), "settings: back to Romanian");
@@ -451,6 +483,12 @@ public class ChallengeClientGameTest implements FabricClientGameTest {
 		ctx.getInput().setCursorPos(pos[0], pos[1]);
 		ctx.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
 		ctx.waitTicks(2);
+	}
+
+	/** Clicks the language button (real mouse) until it shows {@code name}. */
+	private static void pickLanguage(ClientGameTestContext ctx, String name) {
+		for (int i = 0; i < 20 && !buttonText(ctx, "Language to learn").endsWith(": " + name); i++) click(ctx, "Language to learn");
+		check(buttonText(ctx, "Language to learn").endsWith(": " + name), "settings: picked " + name);
 	}
 
 	private static String buttonText(ClientGameTestContext ctx, String prefix) {

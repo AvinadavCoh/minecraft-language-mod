@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.Normalizer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -104,6 +103,11 @@ public final class TranslationDictionary {
 		// The answer inside a longer phrase ("e o pâine", "pâine pâine") also counts: try every run
 		// of consecutive words as long as an answer, or one word longer (Whisper splits "Pa-nă").
 		// Exact letters only here: with slips allowed too, some piece of any long phrase would pass.
+		// Chinese/Japanese have no spaces between words: the answer anywhere in the letters counts.
+		String saidLetters = lettersOnly(said);
+		for (String a : accepted) {
+			if (Accents.noSpaces(a) && saidLetters.contains(lettersOnly(a))) return true;
+		}
 		String[] words = said.split(" ");
 		for (String a : accepted) {
 			int n = a.split(" ").length;
@@ -131,7 +135,7 @@ public final class TranslationDictionary {
 	}
 
 	private static String lettersOnly(String s) {
-		return s.replaceAll("[^\\p{L}\\p{N}]", "");
+		return s.replaceAll("[^\\p{L}\\p{M}\\p{N}]", ""); // \p{M}: Hindi vowel signs are marks
 	}
 
 	/** Levenshtein distance, giving up early once it exceeds {@code max}. */
@@ -165,8 +169,7 @@ public final class TranslationDictionary {
 
 	/** Lowercase, drop diacritics (ș -> s, ă -> a) and punctuation (speech-to-text adds "Măr."), collapse whitespace. */
 	private static String normalizeRaw(String s) {
-		String decomposed = Normalizer.normalize(s.toLowerCase(Locale.ROOT), Normalizer.Form.NFD);
-		return decomposed.replaceAll("\\p{M}", "").replaceAll("[\\p{P}\\p{S}]", " ").trim().replaceAll("\\s+", " ");
+		return Accents.strip(s.toLowerCase(Locale.ROOT)).replaceAll("[\\p{P}\\p{S}]", " ").trim().replaceAll("\\s+", " ");
 	}
 
 	private static String stripArticle(String s, Set<String> articles) {

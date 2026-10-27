@@ -43,11 +43,11 @@ public final class LanguageModClient implements ClientModInitializer {
 		settingsKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.languagemod.settings",
 				InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_K, category));
 		ClientPlayNetworking.registerGlobalReceiver(HudPayloads.DictionarySnapshot.ID,
-				(p, ctx) -> DictionaryScreen.receive(p.entries()));
+				(p, ctx) -> DictionaryScreen.receive(p.entries(), p.language()));
 
 		// Fabric runs these receivers on the client thread, same thread as rendering.
 		ClientPlayNetworking.registerGlobalReceiver(HudPayloads.Start.ID, (p, ctx) -> {
-			HUD.start(p.stack(), p.word(), p.languageName(), p.durationTicks());
+			HUD.start(p.stack(), p.word(), p.languageName(), p.languageCode(), p.durationTicks());
 			VOICE.onChallengeStart(p.languageCode(), p.word());
 		});
 		ClientPlayNetworking.registerGlobalReceiver(HudPayloads.Attempt.ID,

@@ -1,5 +1,6 @@
 package dev.itonk.languagemod.client;
 
+import dev.itonk.languagemod.dictionary.Romanizer;
 import dev.itonk.languagemod.network.HudPayloads;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.DrawContext;
@@ -27,6 +28,8 @@ public final class DictionaryScreen extends Screen {
 	private static final int HEADER_H = 16;
 
 	private static List<HudPayloads.DictionaryEntry> latest;
+	/** Language of {@code latest} ("he"), for the Latin-letter readings. */
+	private static String language = "";
 
 	private double scroll;
 	/** Neither the server nor client-only mode has a dictionary (yet: the mode starts ~2 s after joining). */
@@ -37,8 +40,9 @@ public final class DictionaryScreen extends Screen {
 	}
 
 	/** Called by the packet receiver (client thread). */
-	static void receive(List<HudPayloads.DictionaryEntry> entries) {
+	static void receive(List<HudPayloads.DictionaryEntry> entries, String lang) {
 		latest = entries;
+		language = lang;
 	}
 
 	@Override
@@ -51,6 +55,7 @@ public final class DictionaryScreen extends Screen {
 			ClientPlayNetworking.send(HudPayloads.DictionaryRequest.INSTANCE);
 		} else if (LanguageModClient.CLIENT_ONLY.active()) {
 			latest = LanguageModClient.CLIENT_ONLY.snapshot();
+			language = LanguageModClient.CLIENT_ONLY.language();
 		} else {
 			unavailable = true;
 		}
@@ -130,7 +135,10 @@ public final class DictionaryScreen extends Screen {
 		Identifier id = Identifier.tryParse(e.itemId());
 		ItemStack stack = id == null ? ItemStack.EMPTY : new ItemStack(Registries.ITEM.get(id));
 		ctx.drawItem(stack, x, y + 1);
-		ctx.drawTextWithShadow(textRenderer, Text.literal(e.word()), x + 22, y + 2, 0xFFFFFFFF);
+		Text word = Text.literal(e.word());
+		ctx.drawTextWithShadow(textRenderer, word, x + 22, y + 2, 0xFFFFFFFF);
+		String reading = Romanizer.reading(language, e.word());
+		if (!reading.isEmpty()) ctx.drawTextWithShadow(textRenderer, reading, x + 22 + textRenderer.getWidth(word) + 6, y + 2, 0xFF9FC5E8);
 		ctx.drawTextWithShadow(textRenderer, stack.getName(), x + 22, y + 11, 0xFF808080);
 
 		// Right side: ✓/✗ counts, box progress, due time.

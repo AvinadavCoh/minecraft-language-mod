@@ -1,9 +1,17 @@
 {
-	"_comment": "Languages offered in the settings screen. locale = Minecraft's language file the full dictionary is built from (on the player's PC). code = Whisper language code and dictionary file name.",
+	"_comment": "Languages offered in the settings screen. locale = Minecraft's language file the full dictionary is built from (on the player's PC). code = Whisper language code, dictionary file name and readings/<code>.json.",
 	"languages": [
 		{"code": "ro", "name": "Romanian", "locale": "ro_ro"},
 		{"code": "es", "name": "Spanish", "locale": "es_es"},
+		{"code": "fr", "name": "French", "locale": "fr_fr"},
+		{"code": "de", "name": "German", "locale": "de_de"},
+		{"code": "it", "name": "Italian", "locale": "it_it"},
+		{"code": "pt", "name": "Portuguese (Brazil)", "locale": "pt_br"},
 		{"code": "ru", "name": "Russian", "locale": "ru_ru"},
+		{"code": "ja", "name": "Japanese", "locale": "ja_jp"},
+		{"code": "ko", "name": "Korean", "locale": "ko_kr"},
+		{"code": "zh", "name": "Chinese (Simplified)", "locale": "zh_cn"},
+		{"code": "hi", "name": "Hindi", "locale": "hi_in"},
 		{"code": "he", "name": "Hebrew", "locale": "he_il"}
 	]
 }

@@ -45,7 +45,7 @@ final class ClientChallengePlayer implements ChallengePlayer {
 	@Override
 	public void prompt(ItemStack stack, String word, String languageName, String languageCode, int durationTicks) {
 		chat(ChallengeMessages.prompt(stack, word, languageName));
-		LanguageModClient.HUD.start(stack.copyWithCount(1), word, languageName, durationTicks);
+		LanguageModClient.HUD.start(stack.copyWithCount(1), word, languageName, languageCode, durationTicks);
 		LanguageModClient.VOICE.onChallengeStart(languageCode, word);
 		sound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), 1f);
 	}

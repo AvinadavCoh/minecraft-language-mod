@@ -95,6 +95,10 @@ public final class ClientOnlyMode {
 		return true;
 	}
 
+	String language() {
+		return rules == null ? "" : rules.config().targetLanguage;
+	}
+
 	List<HudPayloads.DictionaryEntry> snapshot() {
 		return rules.snapshot(player.uuid());
 	}

@@ -120,11 +120,12 @@ public final class HudPayloads {
 		}
 	}
 
-	/** S2C: the player's words, highest-priority "needs repeating" first. */
-	public record DictionarySnapshot(List<DictionaryEntry> entries) implements CustomPayload {
+	/** S2C: the player's words, highest-priority "needs repeating" first; {@code language} = their code ("he"). */
+	public record DictionarySnapshot(List<DictionaryEntry> entries, String language) implements CustomPayload {
 		public static final Id<DictionarySnapshot> ID = new Id<>(Identifier.of("languagemod", "dictionary_snapshot"));
 		public static final PacketCodec<RegistryByteBuf, DictionarySnapshot> CODEC = PacketCodec.tuple(
 				DictionaryEntry.CODEC.collect(PacketCodecs.toList()), DictionarySnapshot::entries,
+				PacketCodecs.STRING, DictionarySnapshot::language,
 				DictionarySnapshot::new);
 
 		@Override

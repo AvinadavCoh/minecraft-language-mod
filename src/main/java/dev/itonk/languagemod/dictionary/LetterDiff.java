@@ -1,6 +1,5 @@
 package dev.itonk.languagemod.dictionary;
 
-import java.text.Normalizer;
 import java.util.Locale;
 
 /**
@@ -54,8 +53,7 @@ public final class LetterDiff {
 	private static char[] fold(String s) {
 		char[] out = new char[s.length()];
 		for (int k = 0; k < s.length(); k++) {
-			String base = Normalizer.normalize(String.valueOf(s.charAt(k)), Normalizer.Form.NFD)
-					.replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT);
+			String base = Accents.strip(String.valueOf(s.charAt(k))).toLowerCase(Locale.ROOT);
 			out[k] = base.isEmpty() ? s.charAt(k) : base.charAt(0);
 		}
 		return out;

@@ -102,7 +102,7 @@ public final class LanguageMod implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(HudPayloads.DictionaryRequest.ID, (payload, context) -> {
 			ServerPlayerEntity player = context.player();
 			context.server().execute(() -> ServerPlayNetworking.send(player,
-					new HudPayloads.DictionarySnapshot(challenges.snapshot(player))));
+					new HudPayloads.DictionarySnapshot(challenges.snapshot(player), challenges.config().targetLanguage)));
 		});
 	}
 

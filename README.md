@@ -19,13 +19,20 @@ Inspired by Fawcette's "name every item in another language" challenge videos.
 - **Your dictionary** (press **J**): every word you've met, what you know, what needs repeating.
   Words come back as reviews on a spaced schedule (5 min, 20 min, 1 h, 3 h, 10 h of play time);
   missed words come back first.
-- **Languages**: Romanian, Spanish, Russian, Hebrew (Hebrew reads right to left). Each language
+- **Languages**: Spanish, French, German, Italian, Portuguese (Brazil), Russian, Japanese, Korean,
+  Chinese (Simplified), Hindi, Romanian and Hebrew (Hebrew reads right to left). Each language
   keeps its own dictionary.
+- **How to read it**: words in other alphabets show their pronunciation in small Latin letters
+  underneath, in the popup and in the dictionary (עפר → Afar, Торт → Tort, 土 → Tsuchi).
 - **Settings screen** (press **K**): language, time to answer, what a miss does, voice mode, GPU.
 - **Works on any server**: on a server that runs the mod, the server enforces the rules (real
   damage, items deleted). On a server without it, the mod runs on your side
   ("client-only mode"): a miss flashes the screen red and shakes the camera instead of
   dealing real damage.
+
+| Japanese | Korean | Chinese | Hindi |
+|---|---|---|---|
+| ![](docs/test-shots/0015_17-japanese-prompt.png) | ![](docs/test-shots/0016_18-korean-prompt.png) | ![](docs/test-shots/0017_19-chinese-prompt.png) | ![](docs/test-shots/0019_21-hindi-dictionary.png) |
 
 | Settings | Russian | Hebrew | Dictionary |
 |---|---|---|---|

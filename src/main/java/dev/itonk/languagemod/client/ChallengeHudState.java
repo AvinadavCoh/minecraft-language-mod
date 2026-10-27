@@ -1,5 +1,6 @@
 package dev.itonk.languagemod.client;
 
+import dev.itonk.languagemod.dictionary.Romanizer;
 import net.minecraft.item.ItemStack;
 
 /**
@@ -27,10 +28,14 @@ public final class ChallengeHudState {
 	int hurtTicks;
 	static final int HURT_TICKS = 10;
 
-	void start(ItemStack stack, String word, String languageName, int durationTicks) {
+	/** How to read the word in Latin letters ("" for Latin-script languages). */
+	String reading = "";
+
+	void start(ItemStack stack, String word, String languageName, String languageCode, int durationTicks) {
 		this.phase = Phase.ASKING;
 		this.stack = stack;
 		this.word = word;
+		this.reading = Romanizer.reading(languageCode, word);
 		this.languageName = languageName;
 		this.durationTicks = Math.max(1, durationTicks);
 		this.mask = null;
@@ -83,6 +88,7 @@ public final class ChallengeHudState {
 	// Read-only views for the client gametest.
 	public String debugPhase() { return phase.name(); }
 	public String debugWord() { return word; }
+	public String debugReading() { return reading; }
 	public String debugMask() { return mask == null ? "" : mask; }
 	public String debugLastAttempt() { return lastAttempt; }
 	public boolean debugItemKept() { return itemKept; }

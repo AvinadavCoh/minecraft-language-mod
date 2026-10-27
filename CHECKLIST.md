@@ -1,6 +1,6 @@
 # Checklist
 
-Bot = `./gradlew runClientGameTest` (src/gametest, real chat/W/Q/F/inventory input, 20 checks). PolyMC = played by Claude in instance "LanguageMod 1.21.11". Screenshots in docs/test-shots/.
+Bot = `./gradlew runClientGameTest` (src/gametest, real chat/W/Q/F/inventory/mouse input, 84 checks). PolyMC = played by Claude in instance "LanguageMod 1.21.11". Screenshots in docs/test-shots/.
 
 - [x] Mod compiles against 1.21.11 · [RAN] ./gradlew build · 2026-10-26
 - [x] Mod loads and plays in PolyMC · [SAW] polymc-correct-dirt.jpg · 2026-10-26
@@ -56,6 +56,12 @@ Bot = `./gradlew runClientGameTest` (src/gametest, real chat/W/Q/F/inventory inp
 - [x] Whisper loop (263 chars for 1 s of Hebrew) no longer disconnects: loops dropped, answers capped at 100 chars · [RAN] VoiceTextTest on the real output + bot 58 PASS · 2026-10-27
 - [x] Renamed "Say It Or Lose It" (mod id stays languagemod so configs/saves carry over) · [RAN] build · 2026-10-27
 - [x] Voice model download asked first ("Not now" remembered, Download button in settings) · [RAN] bot + [SAW] 12b · 2026-10-27
+- [x] 8 more languages (French, German, Italian, Portuguese BR, Japanese, Korean, Chinese, Hindi), word lists built from the game · [RAN] bot (typed answers correct in ja/ko/zh/hi) + [SAW] 17-20 · 2026-10-27
+- [x] Readings in small Latin letters under non-Latin words, popup + dictionary (עפר → Afar, 羽根 → Hane, 뼈다귀 → Ppyeodagwi, 鸡蛋 → Jī dàn, धागा → Dhaaga, Торт → Tort) · [RAN] unit test: all 1,846 game names in he/ja/ko/zh/hi/ru have one + [SAW] 14-21 · 2026-10-27
+- [ ] Reading accuracy judged by a speaker (Hebrew/Japanese tables hand-written, Korean/Hindi rule-based) · owner
+- [ ] KNOWN: Minecraft's font doesn't join Hindi letters (vowel signs drawn detached); the Latin reading covers it · [SAW] 21-hindi-dictionary
+- [ ] French/German/Italian/Portuguese played · untested (same path as Spanish)
+- [ ] Voice in the new languages (Whisper ja/ko/zh/hi) · untested
 - [ ] Modrinth + CurseForge listings · texts in docs/listing/LISTING.md; needs owner accounts + icon
 - [ ] Mod works on a second PC (PolyMC, release jar) · user tested: loads, popup, settings, language switch · 2026-10-27
 - [ ] Voice in PolyMC after the backlog fix (pană / pui crud) · needs owner

@@ -59,6 +59,15 @@
 - Public: https://github.com/AvinadavCoh/minecraft-language-mod (MIT). Server address scrubbed from history before
   the first push. JDK 21 found via gradle/gradle-daemon-jvm.properties (no machine path in the repo). Releases: v0.1.0, v0.1.1 (Whisper-loop disconnect fix, sha256 29bb860a…).
 
+- 2026-10-27: 12 languages (top learned minus English, plus ro/he). Readings under non-Latin words (dictionary/Romanizer):
+  ICU4J 77.1 is a Minecraft library (full translit data, zero jar cost): ru = Russian-Latin/BGN, zh = Han-Latin.
+  ICU's Hangul is letter-by-letter and its Devanagari keeps every schwa, so ko (Revised Romanization + sound changes)
+  and hi (schwa deletion) are own rules. ICU reads Japanese kanji as Mandarin and Hebrew without vowels, so ja/he use
+  hand-written word tables (resources/languagemod/readings/*.json; 729 Hebrew words, 443 kanji tokens). Unknown word =
+  no reading. RomanizerTest checks all 1,846 game names per language have one (needs Loom's asset cache).
+  Accents.strip replaced the NFD+\p{M} stripping, which would have deleted Hindi vowel signs and Japanese dakuten.
+  CJK answers count anywhere inside a phrase (no spaces in Chinese/Japanese). DictionarySnapshot now carries the language.
+
 ## Next 3 steps
 1. Owner plays in PolyMC and judges feel (timer length, freeze, messages).
 2. Persist `verified` sets per player (currently reset each server start).

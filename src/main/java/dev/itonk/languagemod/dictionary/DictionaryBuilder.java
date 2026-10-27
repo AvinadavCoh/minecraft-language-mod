@@ -4,7 +4,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -64,7 +63,7 @@ public final class DictionaryBuilder {
 	}
 
 	private static String fold(String s) {
-		String d = Normalizer.normalize(s.toLowerCase(Locale.ROOT), Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+		String d = Accents.strip(s.toLowerCase(Locale.ROOT));
 		return d.trim().replaceAll("\\s+", " ");
 	}
 }
